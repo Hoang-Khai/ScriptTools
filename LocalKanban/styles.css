@@ -1,0 +1,344 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Noto Sans JP', Tahoma, Geneva, Verdana, sans-serif !important;
+    background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+input {
+    font-family: 'Noto Sans JP', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 1em;
+}
+
+.app-container {
+    display: flex;
+    gap: 20px;
+    max-width: 1800px;
+    margin: 0 auto;
+    min-height: 100vh;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+    width: 350px;
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
+
+.sidebar-header h2 {
+    color: #2d3436;
+    font-size: 1.3em;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #F7BD37;
+}
+
+.project-input-section {
+    display: flex;
+    gap: 8px;
+}
+
+.project-input-section input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid #F7BD37;
+    border-radius: 8px;
+    font-size: 0.95em;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.project-input-section input:focus {
+    border-color: #e5ab1f;
+}
+
+.add-project-btn {
+    background: #F7BD37;
+    color: white;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.add-project-btn:hover {
+    background: #e5ab1f;
+    transform: translateY(-2px);
+}
+
+.projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.project-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.project-item:hover {
+    background: #fffef7;
+    border-color: #F7BD37;
+}
+
+.project-item.active {
+    background: #fffef7;
+    border-color: #F7BD37;
+    font-weight: 600;
+}
+
+.project-name {
+    flex: 1;
+    color: #2d3436;
+    word-break: break-word;
+}
+
+.project-task-count {
+    background: #F7BD37;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+/* ===== Main Content ===== */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+header {
+    background: white;
+    padding: 25px 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    color: #2d3436;
+    font-size: 2em;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.control-btn {
+    background: #F7BD37;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(247, 189, 55, 0.3);
+    white-space: nowrap;
+}
+
+.control-btn:hover {
+    background: #e5ab1f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(247, 189, 55, 0.4);
+}
+
+.control-btn.delete {
+    background: #d63031;
+    box-shadow: 0 2px 8px rgba(214, 48, 49, 0.3);
+}
+
+.control-btn.delete:hover {
+    background: #c0281f;
+    box-shadow: 0 4px 12px rgba(214, 48, 49, 0.4);
+}
+
+.add-task-section {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    gap: 15px;
+}
+
+#taskInput {
+    flex: 1;
+    padding: 12px 20px;
+    border: 2px solid #F7BD37;
+    border-radius: 8px;
+    font-size: 1em;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+#taskInput:focus {
+    border-color: #e5ab1f;
+}
+
+#addTaskBtn {
+    background: #F7BD37;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#addTaskBtn:hover {
+    background: #e5ab1f;
+    transform: translateY(-2px);
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+}
+
+.column {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    min-height: 500px;
+}
+
+.column h2 {
+    color: #2d3436;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 3px solid #F7BD37;
+    font-size: 1.3em;
+}
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.task-card {
+    background: #fffef7;
+    border: 2px solid #F7BD37;
+    border-radius: 10px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.task-card:hover {
+    box-shadow: 0 4px 12px rgba(247, 189, 55, 0.3);
+    transform: translateY(-2px);
+}
+
+.task-content {
+    color: #2d3436;
+    font-size: 1em;
+    margin-bottom: 12px;
+    word-wrap: break-word;
+}
+
+.task-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.task-btn {
+    background: #F7BD37;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.task-btn:hover {
+    background: #e5ab1f;
+    transform: scale(1.05);
+}
+
+.task-btn.delete {
+    background: #d63031;
+}
+
+.task-btn.delete:hover {
+    background: #c0281f;
+}
+
+.task-btn:disabled {
+    background: #dfe6e9;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@media (max-width: 1200px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: static;
+    }
+
+    .board {
+        grid-template-columns: 1fr;
+    }
+
+    header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+
+    .controls {
+        width: 100%;
+    }
+}
