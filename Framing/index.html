@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Image Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+    :root {
+        --sidebar-width: 320px;
+        --bg-color: #f4f4f9;
+    }
+
+    body {
+        display: flex;
+        margin: 0;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+    }
+
+    #sidebar {
+        width: var(--sidebar-width);
+        height: 100vh;
+        background: #2c3e50;
+        color: white;
+        padding: 20px;
+        box-sizing: border-box;
+        position: fixed;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        z-index: 10;
+    }
+
+    #main-content {
+        margin-left: var(--sidebar-width);
+        flex-grow: 1;
+        padding: 20px;
+        display: flex;
+        flex-direction: row; /* Đặt 2 section nằm ngang */
+        justify-content: center;
+        align-items: flex-start;
+        gap: 20px;
+        min-height: 100vh;
+    }
+
+    .section {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-align: center;
+        /* Thu nhỏ hiển thị xuống 50% nhưng giữ nguyên kích thước canvas gốc */
+        width: 540px; 
+    }
+
+    canvas {
+        width: 100%; /* Canvas sẽ hiển thị theo độ rộng của .section (540px) */
+        height: auto;
+        border: 1px solid #ddd;
+        display: block;
+        margin-bottom: 15px;
+    }
+
+    textarea {
+        height: 150px;
+        resize: vertical;
+        padding: 10px;
+        border-radius: 4px;
+    }
+
+    button#startBtn {
+        padding: 15px;
+        background: #3498db;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        border-radius: 4px;
+    }
+
+    .download-btn {
+        padding: 10px 20px;
+        background: #27ae60;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        display: inline-block;
+    }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h2>Controls</h2>
+    <label>Upload Image:</label>
+    <input type="file" id="imageInput" accept="image/*">
+    
+    <label>Input Text:</label>
+    <textarea id="textContent" placeholder="Enter text here..."></textarea>
+    
+    <button id="startBtn">Generate Previews</button>
+</div>
+
+<div id="main-content">
+    <div class="section">
+        <h3>With Text</h3>
+        <canvas id="canvasWithText" width="1080" height="1080"></canvas>
+        <button class="download-btn" onclick="downloadCanvas('canvasWithText', 'with-text.png')">Download PNG</button>
+    </div>
+
+    <div class="section">
+        <h3>Without Text</h3>
+        <canvas id="canvasWithoutText" width="1080" height="1080"></canvas>
+        <button class="download-btn" onclick="downloadCanvas('canvasWithoutText', 'without-text.png')">Download PNG</button>
+    </div>
+</div>
+
+<script>
+    const imageInput = document.getElementById('imageInput');
+    const textInput = document.getElementById('textContent');
+    const startBtn = document.getElementById('startBtn');
+
+    // Asset paths
+    const BG_PATH = './BG_Scaled.png';
+    const LOGO_PATH = './LogoTrans.png';
+
+    startBtn.addEventListener('click', async () => {
+        if (!imageInput.files[0]) {
+            alert("Please select an image first!");
+            return;
+        }
+
+        const userImg = await loadImage(URL.createObjectURL(imageInput.files[0]));
+        const bgImg = await loadImage(BG_PATH);
+        const logoImg = await loadImage(LOGO_PATH);
+
+        drawWithText(userImg, bgImg, logoImg);
+        drawWithoutText(userImg, bgImg, logoImg);
+    });
+
+    async function drawWithText(userImg, bgImg, logoImg) {
+        const canvas = document.getElementById('canvasWithText');
+        const ctx = canvas.getContext('2d');
+        const text = textInput.value;
+
+        // 1. Fill background with pattern
+        const pattern = ctx.createPattern(bgImg, 'repeat');
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, 1080, 1080);
+
+        // 2. Scale and Put User Image (h:663, w:864 at x:109, y:109)
+        ctx.drawImage(userImg, 109, 109, 864, 663);
+
+        // 3. Horizontal Line (y:772, width 8px, color #EDA072)
+        ctx.fillStyle = '#EDA072';
+        ctx.fillRect(109, 772, 864, 8);
+
+        // 4. Text Area (White background)
+        // Filling the remaining space inside the frame
+        ctx.fillStyle = '#FFFFFF'; // TODO: Change text area background color if needed
+        ctx.fillRect(109, 780, 864, 191);
+
+        // 5. Render Text
+        ctx.fillStyle = '#333333'; // TODO: Change text color
+        ctx.font = '40px "Noto Sans JP"'; // TODO: Adjust font size/weight
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        wrapText(ctx, text, 109 + (864/2), 780 + (191/2), 800, 50);
+
+        // 6. Draw Logo (Height 108, centered horizontally, overlapping top border)
+        const logoRatio = logoImg.width / logoImg.height;
+        const logoW = 108 * logoRatio;
+        ctx.drawImage(logoImg, (1080 - logoW) / 2, 0, logoW, 108);
+    }
+
+    async function drawWithoutText(userImg, bgImg, logoImg) {
+        const canvas = document.getElementById('canvasWithoutText');
+        const ctx = canvas.getContext('2d');
+
+        // 1. Fill background with pattern
+        const pattern = ctx.createPattern(bgImg, 'repeat');
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, 1080, 1080);
+
+        // 2. Scale and Put User Image (864x864 at x:109, y:109)
+        ctx.drawImage(userImg, 109, 109, 864, 864);
+
+        // 3. Draw Logo
+        const logoRatio = logoImg.width / logoImg.height;
+        const logoW = 108 * logoRatio;
+        ctx.drawImage(logoImg, (1080 - logoW) / 2, 0, logoW, 108);
+    }
+
+    // Helper: Load Image Promise
+    function loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
+    // Helper: Text Wrapping
+    function wrapText(context, text, x, y, maxWidth, lineHeight) {
+        // Tách các đoạn dựa trên dấu xuống dòng thực tế (\n)
+        const paragraphs = text.split('\n');
+        let allLines = [];
+
+        paragraphs.forEach(paragraph => {
+            const words = paragraph.split(''); // Hỗ trợ tiếng Nhật/Việt
+            let line = '';
+
+            for (let n = 0; n < words.length; n++) {
+                let testLine = line + words[n];
+                let metrics = context.measureText(testLine);
+                let testWidth = metrics.width;
+                if (testWidth > maxWidth && n > 0) {
+                    allLines.push(line);
+                    line = words[n];
+                } else {
+                    line = testLine;
+                }
+            }
+            allLines.push(line);
+        });
+
+        // Tính toán lại vị trí bắt đầu để căn giữa toàn bộ khối văn bản theo chiều dọc
+        let totalHeight = allLines.length * lineHeight;
+        let startY = y - (totalHeight / 2) + (lineHeight / 2);
+
+        for (let k = 0; k < allLines.length; k++) {
+            context.fillText(allLines[k], x, startY + (k * lineHeight));
+        }
+    }
+
+    // Helper: Download Canvas
+    function downloadCanvas(canvasId, filename) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = document.getElementById(canvasId).toDataURL('image/png');
+        link.click();
+    }
+</script>
+
+</body>
+</html>
