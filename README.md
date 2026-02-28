@@ -6,3 +6,6 @@ Some tools that I find useful
 
 ## Productivity tools
 1. [Local Kanban](https://hoang-khai.github.io/ScriptTools/LocalKanban/index.html 'A simple kanban that uses your local storage') 
+
+## Fanpage tools
+1. [Framing image and contents](https://hoang-khai.github.io/ScriptTools/Framing/index.html 'A simple tool to create an image with a preset frame') 
