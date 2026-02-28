@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>刀 Projects</h2>
+            </div>
+            
+            <div class="project-input-section">
+                <input type="text" id="newProjectInput" placeholder="New project name...">
+                <button id="addProjectBtn" class="add-project-btn">+ Add</button>
+            </div>
+
+            <div class="projects-list" id="projectsList"></div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <header>
+                <h1>搭 <span id="currentProjectName">Kanban Board</span></h1>
+                <div class="controls">
+                    <button id="renameProjectBtn" class="control-btn">笨擾ｸ・Rename</button>
+                    <button id="deleteProjectBtn" class="control-btn delete">卵 Delete</button>
+                    <button id="exportBtn" class="control-btn">踏 Export</button>
+                    <button id="importBtn" class="control-btn">豆 Import</button>
+                    <input type="file" id="fileInput" accept=".json" style="display: none;">
+                </div>
+            </header>
+
+            <div class="add-task-section">
+                <input type="text" id="taskInput" placeholder="Enter new task...">
+                <button id="addTaskBtn">+ Add Task</button>
+            </div>
+
+            <div class="board">
+                <div class="column" data-status="todo">
+                    <h2>統 To Do</h2>
+                    <div class="task-list" id="todoList"></div>
+                </div>
+                <div class="column" data-status="inprogress">
+                    <h2>笞呻ｸ・In Progress</h2>
+                    <div class="task-list" id="inprogressList"></div>
+                </div>
+                <div class="column" data-status="done">
+                    <h2>笨・Done</h2>
+                    <div class="task-list" id="doneList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
