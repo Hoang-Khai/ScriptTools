@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matcha List Shuffler</title>
+    <style>
+        :root {
+            --matcha-dark: #556b2f;
+            --matcha-base: #a9ba9d;
+            --matcha-light: #e8f0e6;
+            --matcha-accent: #8fb339;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--matcha-light);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            color: #333;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            width: 100%;
+            gap: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--white);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: var(--matcha-dark);
+            margin-top: 0;
+            border-bottom: 2px solid var(--matcha-base);
+            padding-bottom: 10px;
+        }
+
+        /* Form Elements */
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--matcha-dark);
+        }
+
+        textarea {
+            flex-grow: 1;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--matcha-base);
+            border-radius: 8px;
+            resize: none;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+        }
+
+        textarea:focus {
+            border-color: var(--matcha-accent);
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid var(--matcha-base);
+            border-radius: 5px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Button */
+        button {
+            background-color: var(--matcha-accent);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: var(--matcha-dark);
+        }
+
+        /* Output specific */
+        #output-list {
+            background-color: #fafafa;
+            color: #444;
+            cursor: text;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <section id="input-panel">
+        <h2>Configuration</h2>
+        
+        <div class="control-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <label for="input-list">Enter List (One item per line):</label>
+            <textarea id="input-list" placeholder="Apples&#10;Bananas&#10;Cherries..."></textarea>
+        </div>
+
+        <div class="control-group">
+            <label for="num-results">Number of results:</label>
+            <input type="number" id="num-results" value="5" min="1">
+        </div>
+
+        <div class="control-group">
+            <label>Sampling Method:</label>
+            <div class="radio-group">
+                <label style="font-weight: normal; display: inline;">
+                    <input type="radio" name="replace" value="with" checked> With Replacement
+                </label>
+                <label style="font-weight: normal; display: inline;">
+                    <input type="radio" name="replace" value="without"> Without Replacement
+                </label>
+            </div>
+        </div>
+
+        <button onclick="shuffleList()">Shuffle & Draw</button>
+    </section>
+
+    <section id="output-panel">
+        <h2>Shuffled Results</h2>
+        <textarea id="output-list" readonly placeholder="Results will appear here..."></textarea>
+        <p style="font-size: 0.8em; color: #777;">Text above is selectable for copying.</p>
+    </section>
+</div>
+
+<script>
+    function shuffleList() {
+        const input = document.getElementById('input-list').value.trim();
+        const numToDraw = parseInt(document.getElementById('num-results').value);
+        const replace = document.querySelector('input[name="replace"]:checked').value === 'with';
+        const outputArea = document.getElementById('output-list');
+
+        if (!input) {
+            alert("Please enter some items first!");
+            return;
+        }
+
+        let items = input.split('\n').map(item => item.trim()).filter(item => item !== "");
+        let results = [];
+
+        if (!replace && numToDraw > items.length) {
+            alert("Cannot draw more items than available without replacement!");
+            return;
+        }
+
+        if (replace) {
+            // Random sampling with replacement
+            for (let i = 0; i < numToDraw; i++) {
+                const randomIndex = Math.floor(Math.random() * items.length);
+                results.push(items[randomIndex]);
+            }
+        } else {
+            // Fisher-Yates shuffle then slice for without replacement
+            let pool = [...items];
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            results = pool.slice(0, numToDraw);
+        }
+
+        outputArea.value = results.join('\n');
+    }
+</script>
+
+</body>
+</html>
