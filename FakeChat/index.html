@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Self Chat Messenger</title>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            body {
+                height: 100vh;
+                overflow: hidden;
+                background-color: #f0f2f5;
+                font-family: "Noto Sans JP";
+            }
+            .left-panel {
+                background: white;
+                height: 100vh;
+                border-right: 1px solid #ddd;
+                padding: 20px;
+                overflow-y: auto;
+            }
+            .chat-container {
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+            .chat-messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 20px;
+            }
+            .message-row {
+                margin-bottom: 14px;
+                display: flex;
+            }
+            .message-left {
+                justify-content: flex-start;
+            }
+            .message-right {
+                justify-content: flex-end;
+            }
+            .bubble-wrapper {
+                display: flex;
+                flex-direction: column;
+                max-width: 75%;
+            }
+            .bubble {
+                padding: 10px 15px;
+                border-radius: 18px;
+                font-size: 18px;
+                word-break: break-word;
+            }
+            .bubble img {
+                max-width: 478px;
+                max-height: 478px;
+                width: auto;
+                height: auto;
+                border-radius: 12px;
+                margin-top: 5px;
+                display: block;
+            }
+            .bubble-left {
+                background-color: #e4e6eb;
+                color: black;
+                border-bottom-left-radius: 4px;
+            }
+            .bubble-right {
+                background-color: #0084ff;
+                color: white;
+                border-bottom-right-radius: 4px;
+            }
+            .sender-name {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 3px;
+            }
+            .sender-name-r {
+                text-align: right;
+            }
+            .sender-name-l {
+                text-align: left;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-4 left-panel">
+                    <h5 class="mb-3">
+                        <i class="fa-solid fa-user"></i> Người 1
+                    </h5>
+                    <input
+                        type="text"
+                        id="name1"
+                        class="form-control mb-2"
+                        value="Tôi 1"
+                    />
+                    <textarea
+                        id="message1"
+                        class="form-control mb-2"
+                        rows="3"
+                        placeholder="Nhập nội dung..."
+                    ></textarea>
+                    <input
+                        type="file"
+                        id="image1"
+                        class="form-control mb-2"
+                        accept="image/*"
+                    />
+                    <button
+                        class="btn btn-primary w-100 mb-4"
+                        onclick="sendMessage(1)"
+                    >
+                        <i class="fa-solid fa-paper-plane"></i> Gửi 1
+                    </button>
+                    <h5 class="mb-3">
+                        <i class="fa-solid fa-user"></i> Người 2
+                    </h5>
+                    <input
+                        type="text"
+                        id="name2"
+                        class="form-control mb-2"
+                        value="Tôi 2"
+                    />
+                    <textarea
+                        id="message2"
+                        class="form-control mb-2"
+                        rows="3"
+                        placeholder="Nhập nội dung..."
+                    ></textarea>
+                    <input
+                        type="file"
+                        id="image2"
+                        class="form-control mb-2"
+                        accept="image/*"
+                    />
+                    <button
+                        class="btn btn-secondary w-100"
+                        onclick="sendMessage(2)"
+                    >
+                        <i class="fa-solid fa-paper-plane"></i> Gửi 2
+                    </button>
+                </div>
+                <div class="col-md-8 chat-container">
+                    <div class="chat-messages" id="chatBox"></div>
+                </div>
+            </div>
+        </div>
+        <script>
+            function sendMessage(user) {
+                let name = document
+                    .getElementById(user === 1 ? "name1" : "name2")
+                    .value.trim();
+                let messageInput = document.getElementById(
+                    user === 1 ? "message1" : "message2",
+                );
+                let imageInput = document.getElementById(
+                    user === 1 ? "image1" : "image2",
+                );
+
+                let message = messageInput.value.trim();
+                let file = imageInput.files[0];
+
+                if (!message && !file) return;
+
+                let chatBox = document.getElementById("chatBox");
+
+                let row = document.createElement("div");
+                row.classList.add("message-row");
+                row.classList.add(
+                    user === 1 ? "message-right" : "message-left",
+                );
+
+                let wrapper = document.createElement("div");
+                wrapper.classList.add("bubble-wrapper");
+
+                let sender = document.createElement("div");
+                sender.classList.add("sender-name");
+                sender.classList.add(
+                    user === 1 ? "sender-name-r" : "sender-name-l",
+                );
+                sender.innerText = name;
+
+                let bubble = document.createElement("div");
+                bubble.classList.add("bubble");
+                bubble.classList.add(
+                    user === 1 ? "bubble-right" : "bubble-left",
+                );
+
+                if (message) {
+                    let textNode = document.createElement("div");
+                    textNode.innerText = message;
+                    bubble.appendChild(textNode);
+                }
+
+                if (file) {
+                    let reader = new FileReader();
+                    reader.onload = function (e) {
+                        let img = document.createElement("img");
+                        img.src = e.target.result;
+                        bubble.appendChild(img);
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    };
+                    reader.readAsDataURL(file);
+                }
+
+                wrapper.appendChild(sender);
+                wrapper.appendChild(bubble);
+                row.appendChild(wrapper);
+                chatBox.appendChild(row);
+
+                messageInput.value = "";
+                imageInput.value = "";
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            document
+                .getElementById("message1")
+                .addEventListener("keydown", function (e) {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage(1);
+                    }
+                });
+
+            document
+                .getElementById("message2")
+                .addEventListener("keydown", function (e) {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage(2);
+                    }
+                });
+        </script>
+    </body>
+</html>
