@@ -1,0 +1,78 @@
+{
+  "jp": {
+    "n2": {
+      "shokai": "自己紹介をお願いします。",
+      "experience": [
+        "経験を説明してもらえませんか。",
+        "xxxについて詳しく説明してもらえませんか。",
+        "外部設計の経験がありますか？"
+      ],
+      "skills": [
+        "xxxのプロジェクトで使用した技術は何ですか？",
+        "xxxのプロジェクトで最も難しかった技術的な課題は何でしたか？",
+        "xxxのプロジェクトで、どんなスキルを身につけましたか？"
+      ],
+      "discussion": [
+        "結婚相手を選ぶ際、『気が合う』ことはとても大切だと思いますが、気さえ合えば結婚生活が長く続けられると思いますか？",
+        "もし、あなたが一番『鼻が高い』と思っているスキルをAIが完璧にこなせるようになったら、あなたはどうしますか？"
+      ],
+      "reading": [
+        "この仕様書を読んで、話題と対策をまとめてください。\n現在まで、レンタカーシステムはユーザーが希望する車両を選択できるようになっています。しかし、次のようなケースが発生しています。\nAとBが同じ車両（No123）を選択した場合、 Aは11:00に車を受け取り、12:00に返却する予定、 Bは12:30に車を受け取り、13:30に返却する予定です。 しかし、Aがトラブルにより12:30までに車両を返却できなかった場合、Bは予約していたNo123を受け取ることができません。\nこのような状況を回避するため、現在の予約システムを以下のように修正したいと考えています。\n今後は、特定の車両を予約することを禁止し、車種（車両タイプ）のみを予約できるようにします。これにより、Bはどの車両番号になるかは分かりません。もしAがNo123を時間通りに返却できない場合でも、Bには同じ車種のNo456などの車両を貸し出すことができます。"
+      ]
+    }
+  },
+  "domain": {
+    "HR": {
+      "knowledge": [
+        "Trong dự án XXX bạn có biết phần mềm của bạn nằm ở bước nào trong flow của HR không?\nTrong flow bạn vừa kể, ngoài phần mềm bạn đã làm ra, bạn có thấy bước nào có thể cải thiện bằng phần mềm không?"
+      ],
+      "consult": [
+        "Dự án của bạn làm theo hướng khách đưa vấn đề và bạn đưa giải pháp, hay khách đưa vấn đề và giải pháp, còn bạn triển khai?\nNếu là đưa vấn đề và bạn đưa giải pháp thì có thể kể một vấn đề và giải pháp bạn đưa ra không?"
+      ]
+    }
+  },
+  "design": {
+    "level": "Bạn đã từng làm thiết kế cơ bản/thiết kế chi tiết chưa?\nNếu rồi, bạn hãy cho mình biết trong thiết kế đó bạn đã làm những gì?\nNếu chưa, hãy cho mình biết sự khác nhau giữa thiết kế cơ bản và thiết kế chi tiết.",
+    "tool": [
+      "Bạn đã từng sử dụng công cụ nào để làm thiết kế chưa?\nNếu rồi, bạn hãy cho mình biết công cụ đó là gì và bạn đã sử dụng nó như thế nào?",
+      "Bạn có kinh nghiệm với các loại diagram/uml nào?", 
+      "Đã từng có kinh nghiệm làm mockup chưa?"
+    ],
+    "dataDesign": [
+      "Bạn đã từng thiết kế database/dataflow chưa?\nNếu rồi, hãy chia sẻ quy trình thiết kế DB của bạn.\nNếu chưa, bạn có biết khái niệm chuẩn hóa DB không?"
+    ]
+  },
+  "tech": {
+    "experience": [
+      "Chia sẻ về khó khăn lớn nhất bạn từng gặp và cách giải quyết."
+    ],
+    "problemSolving": [
+      "Problem solving 1"
+    ]
+  },
+  "management": {
+    "experience": [
+      "Bạn đã từng quản lý dự án nào chưa?\nNếu rồi, bạn hãy chia sẻ về dự án đó và vai trò của bạn trong dự án.\nNếu chưa, bạn có biết những kỹ năng cần thiết để quản lý một dự án không?"
+    ],
+    "method": [
+      "Bạn quản lí theo mô hình nào?\nFollow up"
+    ],
+    "costManagement": [
+      "Bạn có được tham gia khâu lựa chọn dự án không?\nNếu có bạn lựa chọn dự án theo tiêu chí gì?",
+      "Phần lớn dự án outsource ở VN không được quản lí chi phí. Bạn có được quản lí chi phí gì không?"
+    ],
+    "organisation": [
+      "Khi quản lí con người, bạn sẽ quan tâm đến những yếu tố gì?\nFollow up",
+      "Trong buổi planning, khách yêu cầu deliver tính năng vào thứ 6, nhưng team bảo là không OT thì không thể xong kịp. Bạn sẽ làm gì?"
+    ]
+  },
+  "softskill": {
+    "criticalCommunication": [
+      "Giới trẻ đang ngày càng kết hôn muộn, thậm chí không muốn kết hôn. Bạn nghĩ đây là xu hướng tốt hay xấu?\nFollow up",
+      "Kiến thức và kinh nghiệm, cái nào quan trọng hơn?\nFollow up"
+    ],
+    "teamwork": [
+      "Khi có mâu thuẫn, bạn thường giải quyết thế nào?"
+    ]
+  }
+}
