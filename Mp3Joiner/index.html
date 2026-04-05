@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MP3 Fusion - Nối File Âm Thanh Trực Tuyến</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #D53E0F;
+            --bg-dark: #121212;
+            --card-bg: #1e1e1e;
+            --text-light: #e0e0e0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background-color: var(--card-bg);
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #b0330d;
+            border-color: #b0330d;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--primary-color);
+            background: rgba(213, 62, 15, 0.05);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .upload-area:hover {
+            background: rgba(213, 62, 15, 0.1);
+        }
+
+        .audio-item {
+            background-color: var(--card-bg);
+            border-left: 5px solid var(--primary-color);
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .gap-input {
+            width: 80px;
+            background: #333;
+            border: 1px solid #444;
+            color: white;
+            text-align: center;
+            border-radius: 5px;
+        }
+
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .spinner-border {
+            color: var(--primary-color);
+            width: 3rem; height: 3rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <div class="spinner-border mb-3" role="status"></div>
+        <h4>Đang xử lý âm thanh...</h4>
+        <p class="text-muted">Vui lòng không đóng trình duyệt</p>
+    </div>
+
+    <nav class="navbar navbar-dark mb-5">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-layer-group me-2"></i>MP3 Fusion
+            </span>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                
+                <div class="upload-area mb-4" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: var(--primary-color);"></i>
+                    <h3>Chọn hoặc Kéo thả file MP3</h3>
+                    <p class="text-muted">Hỗ trợ định dạng .mp3, .wav, .ogg</p>
+                    <input type="file" id="fileInput" multiple accept="audio/*" class="d-none">
+                </div>
+
+                <div id="fileListContainer" class="mb-4">
+                    </div>
+
+                <div id="actionArea" class="text-center d-none">
+                    <button class="btn btn-primary btn-lg px-5" id="mergeBtn">
+                        <i class="fas fa-file-export me-2"></i>Nối & Tải Xuống
+                    </button>
+                    <p class="mt-3 text-muted small">Lưu ý: Tốc độ xử lý phụ thuộc vào cấu hình máy của bạn.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioFiles = [];
+        const fileInput = document.getElementById('fileInput');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const actionArea = document.getElementById('actionArea');
+        const mergeBtn = document.getElementById('mergeBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                audioFiles.push({
+                    id: Date.now() + Math.random(),
+                    file: file,
+                    gap: 1 // mặc định nghỉ 1 giây
+                });
+            });
+            renderList();
+        }
+
+        function renderList() {
+            fileListContainer.innerHTML = '';
+            if (audioFiles.length > 0) {
+                actionArea.classList.remove('d-none');
+            } else {
+                actionArea.classList.add('d-none');
+            }
+
+            audioFiles.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'audio-item animate__animated animate__fadeIn';
+                div.innerHTML = `
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <span class="badge bg-dark me-3">${index + 1}</span>
+                        <div class="text-truncate" style="max-width: 250px;">
+                            <i class="fas fa-music me-2 opacity-50"></i>
+                            <strong>${item.file.name}</strong>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="me-4 text-center">
+                            <label class="d-block small text-muted">Khoảng nghỉ (s)</label>
+                            <input type="number" class="gap-input" value="${item.gap}" min="0" 
+                                   onchange="updateGap(${index}, this.value)">
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" onclick="removeItem(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                fileListContainer.appendChild(div);
+            });
+        }
+
+        function updateGap(index, val) {
+            audioFiles[index].gap = parseFloat(val) || 0;
+        }
+
+        function removeItem(index) {
+            audioFiles.splice(index, 1);
+            renderList();
+        }
+
+        mergeBtn.onclick = async () => {
+            if (audioFiles.length === 0) return;
+
+            loadingOverlay.style.display = 'flex';
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            try {
+                // 1. Giải mã tất cả các file sang AudioBuffer
+                const buffers = [];
+                for (const item of audioFiles) {
+                    const arrayBuffer = await item.file.arrayBuffer();
+                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                    buffers.push({
+                        buffer: audioBuffer,
+                        gap: item.gap
+                    });
+                }
+
+                // 2. Tính toán tổng thời lượng
+                let totalLength = 0;
+                buffers.forEach((b, idx) => {
+                    totalLength += b.buffer.length;
+                    // Thêm khoảng nghỉ (trừ file cuối cùng)
+                    if (idx < buffers.length - 1) {
+                        totalLength += b.gap * audioCtx.sampleRate;
+                    }
+                });
+
+                // 3. Tạo Buffer mới để chứa kết quả nối
+                const outputBuffer = audioCtx.createBuffer(
+                    2, // 2 kênh (stereo)
+                    totalLength,
+                    audioCtx.sampleRate
+                );
+
+                // 4. Ghi dữ liệu vào Buffer mới
+                let offset = 0;
+                buffers.forEach((b, idx) => {
+                    for (let channel = 0; channel < 2; channel++) {
+                        const channelData = b.buffer.getChannelData(channel < b.buffer.numberOfChannels ? channel : 0);
+                        outputBuffer.getChannelData(channel).set(channelData, offset);
+                    }
+                    offset += b.buffer.length + (b.gap * audioCtx.sampleRate);
+                });
+
+                // 5. Chuyển đổi Buffer sang Wav (vì trình duyệt không có sẵn MP3 encoder)
+                const wavBlob = bufferToWave(outputBuffer, totalLength);
+                
+                // 6. Tải xuống
+                const url = URL.createObjectURL(wavBlob);
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = "merged-audio.wav";
+                anchor.click();
+                URL.revokeObjectURL(url);
+
+            } catch (err) {
+                console.error(err);
+                alert("Có lỗi xảy ra khi xử lý file âm thanh.");
+            } finally {
+                loadingOverlay.style.display = 'none';
+                audioCtx.close();
+            }
+        };
+
+        // Helper function: Chuyển AudioBuffer sang file Wav
+        function bufferToWave(abuffer, len) {
+            let numOfChan = abuffer.numberOfChannels,
+                length = len * numOfChan * 2 + 44,
+                buffer = new ArrayBuffer(length),
+                view = new DataView(buffer),
+                channels = [], i, sample,
+                offset = 0,
+                pos = 0;
+
+            // Viết Header WAV
+            setUint32(0x46464952);                         // "RIFF"
+            setUint32(length - 8);                         // kích thước file
+            setUint32(0x45564157);                         // "WAVE"
+            setUint32(0x20746d66);                         // "fmt " chunk
+            setUint32(16);                                 // chiều dài chunk
+            setUint16(1);                                  // PCM (uncompressed)
+            setUint16(numOfChan);
+            setUint32(abuffer.sampleRate);
+            setUint32(abuffer.sampleRate * 2 * numOfChan); // byte rate
+            setUint16(numOfChan * 2);                      // block align
+            setUint16(16);                                 // bits per sample
+            setUint32(0x61746164);                         // "data" chunk
+            setUint32(length - pos - 4);                   // kích thước chunk
+
+            for (i = 0; i < abuffer.numberOfChannels; i++)
+                channels.push(abuffer.getChannelData(i));
+
+            while (pos < length) {
+                for (i = 0; i < numOfChan; i++) {             // interleave channels
+                    sample = Math.max(-1, Math.min(1, channels[i][offset])); // clamp
+                    sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF) | 0; // 16-bit
+                    view.setInt16(pos, sample, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+
+            return new Blob([buffer], { type: "audio/wav" });
+
+            function setUint16(data) {
+                view.setUint16(pos, data, true);
+                pos += 2;
+            }
+
+            function setUint32(data) {
+                view.setUint32(pos, data, true);
+                pos += 4;
+            }
+        }
+    </script>
+</body>
+</html>
