@@ -1,0 +1,462 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 3,
+    "title": "Virtual Networking",
+    "sourceBook": "Chap 03 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Virtual Network Basics & IP Addressing",
+        "summary": "Virtual Networks (VNets) are the fundamental building blocks of Azure networking, scoped to a single region and subscription. IP addresses are assigned from the VNet's specified CIDR address space. Dynamic allocation is the default private IP assignment (similar to DHCP), whereas static allocation allows picking specific unused IPs. Public IPs are assigned via SKUs: Basic (supports dynamic/static, open-by-default, optional idle timeout) or Standard (static-only, secure-by-default with inbound traffic blocked unless allowed by an NSG, zone-redundant)."
+      },
+      {
+        "id": "kp-02",
+        "title": "Routing & User-Defined Routes (UDR)",
+        "summary": "Azure automatically handles all VM-to-VM, subnet-to-subnet, and VM-to-Internet traffic using default system routes. To inspect or redirect traffic (e.g., forcing traffic from a public subnet through a Network Virtual Appliance firewall before it reaches a private subnet), administrators configure custom Route Tables containing User-Defined Routes (UDRs). The next hop of a UDR can be a Virtual Appliance, Virtual Network Gateway, Virtual Network, or the Internet. For NVAs to work properly, IP forwarding must be explicitly enabled on the NVA VM's network interface."
+      },
+      {
+        "id": "kp-03",
+        "title": "Subnet Service Endpoints",
+        "summary": "Service Endpoints provide secure and direct connectivity to Azure PaaS services (such as Azure Storage, SQL Database, Cosmos DB, and Key Vault) over the Microsoft backbone network. By providing the VNet's identity to the target service, it allows restricting access to specific subnets while completely blocking public internet access. Traffic still uses the service's public IP address, and the VM private IP is transmitted as the source. Note that Service Endpoints do not support access from on-premises networks to Azure PaaS services."
+      },
+      {
+        "id": "kp-04",
+        "title": "Private Endpoints (Azure Private Link)",
+        "summary": "Private Endpoints assign a private IP address from your VNet's subnet directly to an Azure PaaS service using Azure Private Link. This completely eliminates public endpoint exposure, keeping traffic fully contained within the VNet. Unlike Service Endpoints, Private Endpoints seamlessly support hybrid connections (on-premises networks accessing the PaaS service securely over S2S VPN or ExpressRoute) and peered virtual networks."
+      },
+      {
+        "id": "kp-05",
+        "title": "Azure DNS & Private Zones",
+        "summary": "Azure DNS hosts and manages external public domains. For internal resolution, Azure Private DNS Zones allow you to use custom domain names for VMs without setting up custom DNS servers. By creating a virtual network link to the private zone, VMs can resolve names. Enabling 'auto-registration' automatically registers VM hostnames as A records pointing to their private IPs. Otherwise, resolution-only virtual network links can be established without auto-registration."
+      },
+      {
+        "id": "kp-06",
+        "title": "Network Security Groups (NSGs) & Application Security Groups (ASGs)",
+        "summary": "NSGs are stateful Layer 3/4 firewalls containing inbound and outbound security rules evaluated by priority (lower number = higher priority). NSGs can be associated with subnets, network interfaces (NICs), or both (triggering an effective rule evaluation). Rules allow/deny traffic based on source/destination (IPs, service tags, or ASGs), port, and protocol. Application Security Groups (ASGs) allow grouping NICs together under a logical tag, simplifying NSG rule management by using the ASG as a source or destination instead of individual IP addresses."
+      },
+      {
+        "id": "kp-07",
+        "title": "Azure Firewall",
+        "summary": "Azure Firewall is a managed, cloud-based stateful firewall-as-a-service operating at Layers 3, 4, and 7. It offers built-in high availability, zone redundancy, and automated scale. It requires a dedicated subnet named 'AzureFirewallSubnet' (minimum prefix /26) and at least one static public IP address. Rules are configured via NAT, network, and application (FQDN) filtering. Outbound internet traffic can be routed through the firewall by creating a UDR (0.0.0.0/0 next hop Virtual Appliance) and associating it with client subnets."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "Virtual Network Subnets & IP SKUs",
+        "whyItMatters": "Understanding address spaces, overlap constraints, and IP SKU behaviors is essential for correct multi-tier architecture design and avoiding peering failures.",
+        "coreKnowledgePatterns": [
+          "VNets are regional; you cannot span a VNet across Azure regions without using intersite connectivity like peering.",
+          "Peer virtual networks MUST have non-overlapping IP address spaces. Peering will fail if ranges overlap.",
+          "Public IP SKUs behave differently: Basic SKU public IPs are open-by-default and support dynamic/static allocation, while Standard SKU public IPs are secure-by-default (blocked by default without an NSG) and static-only.",
+          "A single NIC can host multiple IP configurations, allowing both public and private IP addresses on a single VM interface."
+        ],
+        "questionKeywords": [
+          "least amount of network interfaces",
+          "overlapping address space",
+          "public IP SKU",
+          "static and dynamic allocation"
+        ],
+        "examTraps": [
+          "Peering two VNets with the exact same address space (e.g., 10.2.0.0/16) directly is impossible. You must modify VNet1's address space first.",
+          "Assuming Standard SKU public IPs are open by default. They will block all traffic until an NSG is attached and configured."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Virtual Network (VNet)",
+            "awsEquivalent": "Virtual Private Cloud (VPC)",
+            "keyDifferences": "Azure VNets allow automatic subnet-to-subnet routing by default without requiring an explicit main route table configuration or custom local route additions."
+          },
+          {
+            "azureConcept": "Subnet Default Routing",
+            "awsEquivalent": "VPC Route Tables",
+            "keyDifferences": "Azure subnets automatically have system routes enabling direct outbound internet and inter-subnet access out of the box, whereas AWS requires attaching an Internet Gateway and configuring route tables explicitly."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-02",
+        "topicName": "User-Defined Routes & NVAs",
+        "whyItMatters": "Custom routing allows organizations to bypass default Azure system routes to force security inspection through firewalls or NVAs.",
+        "coreKnowledgePatterns": [
+          "User-Defined Routes (UDRs) override system routes. The most specific route (longest prefix match) always wins.",
+          "Common pattern: Directing traffic from public subnets to private subnets through an NVA next hop.",
+          "IP forwarding is a strict prerequisite that must be enabled on the network interface (NIC) of any VM hosting an NVA to allow it to receive and forward traffic not destined for its own IP."
+        ],
+        "questionKeywords": [
+          "next hop type",
+          "NVA",
+          "IP forwarding",
+          "Route Table"
+        ],
+        "examTraps": [
+          "Deploying a third-party firewall NVA and configuring a UDR but forgetting to enable IP forwarding on the NVA NIC, resulting in dropped packets.",
+          "Associating a Route Table with a GatewaySubnet directly when the target is another gateway."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "User-Defined Route (UDR)",
+            "awsEquivalent": "Custom Route Table",
+            "keyDifferences": "In Azure, UDRs are added to an independent 'Route Table' resource and then associated with one or more subnets. A subnet can only have one associated route table."
+          },
+          {
+            "azureConcept": "IP Forwarding",
+            "awsEquivalent": "Source/Destination Check",
+            "keyDifferences": "Azure requires enabling 'IP forwarding' on the VM's network interface, which is equivalent to disabling the 'Source/Destination Check' on an AWS EC2 instance used as an NVA."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Service Endpoints",
+        "whyItMatters": "Service Endpoints secure access to Azure PaaS services over the backbone network with minimal latency and design complexity.",
+        "coreKnowledgePatterns": [
+          "Service endpoints allow subnets to securely connect to services like Microsoft.Storage or Microsoft.KeyVault.",
+          "The endpoint changes the traffic's source to use the VM's private IP, but the destination remains the PaaS public IP address.",
+          "Service endpoints do not support hybrid connectivity (on-premises VPN clients cannot use service endpoints to reach PaaS services)."
+        ],
+        "questionKeywords": [
+          "Microsoft backbone network",
+          "service endpoints",
+          "secure access to storage",
+          "PaaS public endpoint"
+        ],
+        "examTraps": [
+          "Assuming Service Endpoints allow on-premises servers to connect over S2S VPN or ExpressRoute. For hybrid/on-premises access, Private Endpoints must be used.",
+          "Thinking service endpoints allocate a private IP inside the subnet for the PaaS service. No, the destination IP is still the public IP of the service."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Service Endpoints",
+            "awsEquivalent": "VPC Gateway Endpoints",
+            "keyDifferences": "Azure Service Endpoints secure traffic over the backbone directly to public PaaS endpoints for multiple services, whereas AWS Gateway Endpoints apply specifically to S3 and DynamoDB only."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Private Endpoints (Private Link)",
+        "whyItMatters": "Private Endpoints are the gold standard for secure enterprise hybrid PaaS integration, completely hiding public internet access.",
+        "coreKnowledgePatterns": [
+          "Private Endpoints assign a local private IP address from your subnet to an Azure PaaS service.",
+          "They utilize Azure Private Link to run all communication within the Microsoft backbone.",
+          "Private Endpoints natively support peered VNets and hybrid connections (ExpressRoute / VPN), making them highly versatile."
+        ],
+        "questionKeywords": [
+          "private endpoints",
+          "Azure Private Link",
+          "does not traverse the internet",
+          "hybrid connection access to PaaS"
+        ],
+        "examTraps": [
+          "Using Service Endpoints when the architecture requires an on-premises branch office connected via site-to-site VPN to reach a protected Storage Account. Private Endpoints must be used.",
+          "Confusing Service Endpoints (public IP destination) with Private Endpoints (private IP destination)."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Private Endpoints",
+            "awsEquivalent": "VPC Interface Endpoints (AWS PrivateLink)",
+            "keyDifferences": "Both allocate private IPs from the VPC/VNet subnet and use an ENI/NIC to route traffic privately over the cloud provider's backbone, supporting on-premises hybrid routing via DirectConnect/VPN."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "Azure Private DNS & VNet Linking",
+        "whyItMatters": "Ensures seamless name resolution across private architectures without the overhead of deploying and maintaining custom DNS VM servers.",
+        "coreKnowledgePatterns": [
+          "Private DNS zones host DNS records that can only be resolved from linked virtual networks.",
+          "To enable resolution, you must create a Virtual Network Link from the zone to the VNet.",
+          "Enabling auto-registration on a link automatically creates A records for VMs when they boot and deletes them upon shutdown."
+        ],
+        "questionKeywords": [
+          "private DNS zone",
+          "auto registration",
+          "virtual network link",
+          "name resolution between VNets"
+        ],
+        "examTraps": [
+          "Linking VNet1 to a private zone with auto-registration but expecting VMs in a peered VNet2 to auto-register. Auto-registration is only supported for one VNet per private DNS zone.",
+          "Thinking virtual network links automatically configure custom DNS servers in VM settings. They utilize Azure-provided DNS (168.63.129.16) under the hood."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Private DNS Zones",
+            "awsEquivalent": "Route 53 Private Hosted Zones",
+            "keyDifferences": "Route 53 requires Route 53 Resolvers or DNS outbound/inbound endpoints for hybrid resolution, while Azure DNS Private Zones use Virtual Network Links to easily bind to target networks."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-06",
+        "topicName": "NSG & ASG Rules Evaluation",
+        "whyItMatters": "Failing to comprehend how NSG rules evaluate inbound and outbound traffic, or how subnet and NIC NSGs interact, leads to security holes or broken connectivity.",
+        "coreKnowledgePatterns": [
+          "NSG rules are processed in priority order (100 to 65000). The first matching rule is applied, and subsequent rules are ignored.",
+          "Subnet NSGs and NIC NSGs are evaluated sequentially: Inbound goes Subnet NSG -> NIC NSG. Outbound goes NIC NSG -> Subnet NSG.",
+          "Service tags (e.g., 'AzureLoadBalancer', 'Internet', 'VirtualNetwork', 'AzureKeyVault') simplify outbound/inbound security rule destinations.",
+          "Application Security Groups (ASGs) let you apply NSG rules to specific VMs using logical tags on their NICs, eliminating the need to update rules with static IP lists."
+        ],
+        "questionKeywords": [
+          "destination port 3389",
+          "outbound security rule",
+          "application security group",
+          "service tag destination",
+          "effective security rules"
+        ],
+        "examTraps": [
+          "Denying all outbound internet traffic on port 443 but forgetting that Azure PaaS services require access to service tags, or denying traffic to 'Internet' which also blocks outbound PaaS access unless overridden.",
+          "Associating an NSG with a NIC in region East US, when the VM subnet is in region West US. NSGs are regional and can only be applied to resources in the same region.",
+          "Using destination 'source port' instead of 'destination port' in rules (e.g., blocking RDP outbound requires denying destination port 3389)."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Network Security Group (NSG)",
+            "awsEquivalent": "AWS Security Group + Network ACL",
+            "keyDifferences": "Azure NSGs act as stateful firewalls that can be associated at both the subnet level (like AWS NACLs, but stateful!) and the NIC level (like AWS Security Groups)."
+          },
+          {
+            "azureConcept": "Application Security Group (ASG)",
+            "awsEquivalent": "Security Group Referencing",
+            "keyDifferences": "AWS allows security groups to reference other security groups directly in their rules. Azure achieves this separation of concerns by creating ASGs as separate resources and referencing them in NSG rules."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-07",
+        "topicName": "Azure Firewall Implementation",
+        "whyItMatters": "Azure Firewall provides enterprise-level centralized egress/ingress protection that NSGs (which lack Layer 7 awareness and stateful FQDN intelligence) cannot provide.",
+        "coreKnowledgePatterns": [
+          "Azure Firewall requires a dedicated subnet named exactly 'AzureFirewallSubnet' with a prefix of at least /26.",
+          "To force all outbound traffic from your VNet through Azure Firewall, you must create a custom route table with a route for '0.0.0.0/0' pointing to the firewall's private IP as next hop, and associate it with all other subnets.",
+          "Azure Firewall handles scaling automatically and utilizes Microsoft-managed threat intelligence to block known malicious IPs/domains by default."
+        ],
+        "questionKeywords": [
+          "AzureFirewallSubnet",
+          "route table outbound firewall",
+          "Layer 7 FQDN filtering",
+          "0.0.0.0/0 next hop"
+        ],
+        "examTraps": [
+          "Deploying Azure Firewall in a subnet named 'FirewallSubnet' instead of 'AzureFirewallSubnet', causing deployment failure.",
+          "Allocating a Basic SKU public IP to Azure Firewall. Azure Firewall requires a Standard SKU public IP.",
+          "Configuring application rules (FQDN) in NSGs. NSGs do not support Layer 7 FQDN filtering; this requires Azure Firewall."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Firewall",
+            "awsEquivalent": "AWS Network Firewall",
+            "keyDifferences": "Azure Firewall is fully integrated natively as a first-class service with Azure Monitor, providing simplified centralized management of NAT, Network, and Application rules in one console."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 32",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "Your company has an Azure Active Directory (Azure AD) subscription. You need to deploy five virtual machines (VMs) to your company’s virtual network subnet. The VMs will each have both a public and private IP address. Inbound and outbound security rules for all of these virtual machines must be identical. Which of the following is the least amount of network interfaces needed for this configuration?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "5"
+          },
+          {
+            "id": "opt_b",
+            "text": "10"
+          },
+          {
+            "id": "opt_c",
+            "text": "20"
+          },
+          {
+            "id": "opt_d",
+            "text": "40"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Option A is correct because each virtual machine requires exactly one network interface (NIC) to have both a public and a private IP address assigned to it. This configuration satisfies the requirement for five virtual machines using the absolute minimum of five network interfaces, while allowing identical security rules to be applied uniformly across the tier."
+      },
+      {
+        "id": "q2",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 33",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "Your company has an Azure Active Directory (Azure AD) subscription. You need to deploy five virtual machines (VMs) to your company’s virtual network subnet. The VMs will each have both a public and private IP address. Inbound and outbound security rules for all of these virtual machines must be identical. Which of the following is the least amount of security groups needed for this configuration?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "4"
+          },
+          {
+            "id": "opt_b",
+            "text": "3"
+          },
+          {
+            "id": "opt_c",
+            "text": "2"
+          },
+          {
+            "id": "opt_d",
+            "text": "1"
+          }
+        ],
+        "correctAnswers": [
+          "opt_d"
+        ],
+        "explanation": "Option D is correct because a single Network Security Group (NSG) can be associated with multiple network interfaces or an entire subnet. Since the inbound and outbound security rules for all five virtual machines must be identical, a single NSG is sufficient and represents the absolute minimum requirement."
+      },
+      {
+        "id": "q3",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 69",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains a virtual network named VNet1. VNet1 contains several virtual machines that need to securely access an Azure Key Vault named Vault1. You need to configure a network security group (NSG) named NSG1 associated with the VM subnets. The solution must use the principle of least privilege and minimize administrative effort. What should you configure as the destination of the outbound security rule for NSG1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "an application security group"
+          },
+          {
+            "id": "opt_b",
+            "text": "a service tag"
+          },
+          {
+            "id": "opt_c",
+            "text": "an IP address range"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Option B is correct because using the 'AzureKeyVault' service tag represents a group of IP address prefixes managed by Microsoft for that service, minimizing administrative effort by auto-updating as addresses change. Option A is incorrect as Application Security Groups are for custom VM categorization within a VNet, not external PaaS services. Option C is incorrect as hardcoding IP address ranges requires manual management and violates least privilege and low-maintenance goals."
+      },
+      {
+        "id": "q4",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 13",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains the resources in the following table:\n- NSG1 (Type: Network security group, Region: East US)\n- VNet1 (Type: Virtual network, Region: East US, Resource Group: RG1)\n- VNet2 (Type: Virtual network, Region: East US, Resource Group: RG2)\n- VNet3 (Type: Virtual network, Region: West US, Resource Group: RG1)\nTo which subnets can you apply NSG1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "the subnets on VNet1 only"
+          },
+          {
+            "id": "opt_b",
+            "text": "the subnets on VNet2 and VNet3 only"
+          },
+          {
+            "id": "opt_c",
+            "text": "the subnets on VNet2 only"
+          },
+          {
+            "id": "opt_d",
+            "text": "the subnets on VNet1 and VNet2 only"
+          },
+          {
+            "id": "opt_e",
+            "text": "the subnets on VNet1, VNet2, and VNet3"
+          }
+        ],
+        "correctAnswers": [
+          "opt_d"
+        ],
+        "explanation": "Option D is correct because Network Security Groups (NSGs) can only be associated with virtual networks and subnets that exist within the same Azure region. Since NSG1 is in East US, it can be applied to the subnets on VNet1 and VNet2 (both in East US), but not VNet3, which is located in West US."
+      },
+      {
+        "id": "q5",
+        "source": "Source A: AZ-104 exam1.pdf - Question #81Topic 5",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You plan to peer VNet1 to another virtual network named VNet2. VNet2 has an address space of 10.2.0.0/16. You discover that VNet1 currently has an address space of 10.2.0.0/16 configured. No devices are connected to VNet1. You need to create the peering. What should you do first?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Modify the address space of VNet1."
+          },
+          {
+            "id": "opt_b",
+            "text": "Add a gateway subnet to VNet1."
+          },
+          {
+            "id": "opt_c",
+            "text": "Create a subnet on VNet1 and VNet2."
+          },
+          {
+            "id": "opt_d",
+            "text": "Configure a service endpoint on VNet2."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Option A is correct because Azure virtual networks in a peering relationship must have non-overlapping IP address spaces. Since VNet1 and VNet2 both currently have the 10.2.0.0/16 range configured, you must first modify VNet1's address space to a non-overlapping range before establishing the peering."
+      },
+      {
+        "id": "q6",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 74",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "Your on-premises network contains a VPN gateway. You have an Azure subscription that contains a virtual machine named VM1 and a storage account named storage1. You need to ensure that all the traffic from VM1 to storage1 travels across the Microsoft backbone network. What should you configure?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Azure Application Gateway"
+          },
+          {
+            "id": "opt_b",
+            "text": "private endpoints"
+          },
+          {
+            "id": "opt_c",
+            "text": "a network security group (NSG)"
+          },
+          {
+            "id": "opt_d",
+            "text": "Azure Virtual WAN"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Option B is correct because Private Endpoints allow a VNet client to securely access data over a Private Link using a private IP address, routing traffic entirely over the Microsoft backbone network and eliminating exposure to the public internet. Application Gateway (Option A) and Virtual WAN (Option D) do not provide direct private routing for storage accounts. NSGs (Option C) filter traffic but cannot establish backbone-only routing."
+      },
+      {
+        "id": "q7",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 113",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "You have two Azure virtual machines named VM1 and VM2 that run Windows Server. The virtual machines are in a subnet named Subnet1. Subnet1 is in a virtual network named VNet1. You need to prevent VM1 from accessing VM2 on port 3389. What should you do?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Create a network security group (NSG) that has an outbound security rule to deny destination port 3389 and apply the NSG to the network interface of VM1."
+          },
+          {
+            "id": "opt_b",
+            "text": "Configure Azure Bastion in VNet1."
+          },
+          {
+            "id": "opt_c",
+            "text": "Create a network security group (NSG) that has an outbound security rule to deny source port 3389 and apply the NSG to the network interface of VM1."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Option A is correct because an outbound security rule on the network interface (NIC) of VM1 denying destination port 3389 will actively prevent VM1 from initiating RDP connections to VM2. Option C is incorrect because RDP traffic uses destination port 3389, not source port 3389. Option B is incorrect because Azure Bastion secures remote management access but does not block internal VM-to-VM traffic."
+      }
+    ]
+  }
+}

@@ -1,0 +1,448 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 6,
+    "title": "Managing Azure Storage",
+    "sourceBook": "Chap 06 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Azure Storage Services",
+        "summary": "Azure Storage offers five primary services for distinct data storage needs: Blobs (unstructured object storage like videos, images, and backups), Files (SMB/NFS network file shares), Queues (small message queuing up to 64 KB for async decoupling), Tables (NoSQL key-attribute storage), and Disks (managed block storage for virtual machines)."
+      },
+      {
+        "id": "kp-02",
+        "title": "Storage Redundancy and Replication",
+        "summary": "Protects data from outages through LRS (Locally Redundant Storage - 3 copies in one DC, synchronous), ZRS (Zone-Redundant Storage - synchronous across 3 Availability Zones in a region), GRS (Geo-Redundant Storage - asynchronous cross-region replication with LRS in both primary and secondary), and RA-GRS (Read-Access Geo-Redundant Storage - GRS with read access to the secondary replica)."
+      },
+      {
+        "id": "kp-03",
+        "title": "Storage Account Types & Performance Tiers",
+        "summary": "Azure supports Standard (HDD-backed, lower cost) and Premium (SSD-backed, low latency) tiers. Accounts include General Purpose v2 (GPv2 - supports all services, tiers, and redundancy options), General Purpose v1 (GPv1 - legacy, no tiering), BlockBlobStorage (premium block blobs), and FileStorage (premium files required for SMB Multichannel and NFS)."
+      },
+      {
+        "id": "kp-04",
+        "title": "Blob Access Tiers",
+        "summary": "Blobs support Hot (frequent access, high storage/low access cost), Cool (infrequent access, min 30-day retention), and Archive (rare access, lowest storage/highest access cost, hours of retrieval latency). Default tier is set at the account level (Hot/Cool), while Archive must be set at the individual blob level."
+      },
+      {
+        "id": "kp-05",
+        "title": "Lifecycle Management Policies",
+        "summary": "Automates the transition of blobs to cooler access tiers or handles deletion based on rules (e.g., last modified date). Supported on GPv2, BlobStorage, and Premium Block Blob accounts. It applies the cheapest action if multiple actions overlap."
+      },
+      {
+        "id": "kp-06",
+        "title": "Storage Security and Access Control",
+        "summary": "Secures data through Access Keys (full administrative permissions), Shared Access Signatures (SAS - granular delegated access limited by time, IP range, permissions, or protocol), and Azure AD/RBAC (recommended for secure, secret-free identity access control)."
+      },
+      {
+        "id": "kp-07",
+        "title": "Azure File Sync",
+        "summary": "Centralizes enterprise files in Azure Files while caching frequently accessed data on on-premises Windows Servers. Key components include Storage Sync Service, Sync Groups, Server Endpoints (local paths with Cloud Tiering), and Cloud Endpoints (Azure file shares)."
+      },
+      {
+        "id": "kp-08",
+        "title": "Storage Management & Migration Tools",
+        "summary": "Includes Azure Storage Explorer (GUI-based client for cross-platform storage management), AzCopy (high-performance CLI supporting SAS and Azure AD auth), and the Import/Export Service (offline data transfer using physical disk shipping for large datasets)."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-02",
+        "topicName": "Storage Redundancy Selection & Live Migration",
+        "whyItMatters": "Selecting the right storage redundancy is critical for meeting SLA requirements and protecting against disaster, while knowing how to migrate between redundancy levels is a high-yield exam topic.",
+        "coreKnowledgePatterns": [
+          "Zone-Redundant Storage (ZRS) synchronously replicates data across 3 separate availability zones, remaining available even if a single datacenter/zone fails.",
+          "Standard Locally Redundant Storage (LRS) maintains 3 copies of data within a single datacenter.",
+          "Live migration to ZRS is only supported for storage accounts that use standard LRS; GRS or RA-GRS accounts must be downgraded to LRS before ZRS migration is requested from support.",
+          "Premium storage accounts cannot undergo live migration to ZRS and must be migrated manually."
+        ],
+        "questionKeywords": [
+          "synchronously",
+          "live migration",
+          "zone fails",
+          "replicates synchronously",
+          "single data center in the region fails"
+        ],
+        "examTraps": [
+          "Assuming premium storage accounts can use live migration to ZRS (they must be manually migrated).",
+          "Believing GRS or RA-GRS accounts can directly request a live migration to ZRS without first switching replication to LRS."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Zone-Redundant Storage (ZRS)",
+            "awsEquivalent": "Amazon S3 Standard",
+            "keyDifferences": "S3 Standard automatically replicates across at least three Availability Zones synchronously. ZRS in Azure is a distinct storage replication option that must be selected."
+          },
+          {
+            "azureConcept": "Locally Redundant Storage (LRS)",
+            "awsEquivalent": "Amazon S3 One Zone-IA",
+            "keyDifferences": "S3 One Zone-IA stores data in a single Availability Zone, similar to LRS storing 3 copies within a single datacenter. If that zone/DC fails, data is lost."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Storage Account Kinds and Performance Tiers",
+        "whyItMatters": "Understanding which services and features are supported on each storage account type ensures correct architectural decisions and cost efficiency.",
+        "coreKnowledgePatterns": [
+          "Premium file shares are hosted ONLY in FileStorage storage accounts, which are backed by SSDs and support SMB Multichannel.",
+          "Premium block blobs are hosted in BlockBlobStorage storage accounts.",
+          "General-purpose v2 (GPv2) is the recommended standard account kind because it supports hot, cool, and archive blob tiers.",
+          "General-purpose v1 (GPv1) is legacy and does not support blob tiering (hot/cool/archive)."
+        ],
+        "questionKeywords": [
+          "Premium file shares",
+          "BlockBlobStorage",
+          "GPv2",
+          "GPv1",
+          "FileStorage"
+        ],
+        "examTraps": [
+          "Attempting to set up a premium file share in a general-purpose v2 or GPv1 standard storage account.",
+          "Attempting to tier data (hot/cool/archive) in a standard GPv1 storage account (tiering is unsupported)."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "FileStorage (Premium Azure Files)",
+            "awsEquivalent": "Amazon EFS / Amazon FSx",
+            "keyDifferences": "EFS and FSx are dedicated managed file share services. In Azure, file shares are managed inside Storage Accounts, but premium file shares require a dedicated FileStorage account type."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Blob Access Tiers & Archive Tier Restrictions",
+        "whyItMatters": "Optimizing storage costs requires careful tier selection. The Archive tier offers the lowest storage costs but has strict access limits and is not universally supported on all redundancy types.",
+        "coreKnowledgePatterns": [
+          "The Archive access tier is only supported for Locally Redundant Storage (LRS), Geo-Redundant Storage (GRS), and Read-Access Geo-Redundant Storage (RA-GRS).",
+          "The Archive tier is NOT supported on Zone-Redundant Storage (ZRS), Geo-Zone-Redundant Storage (GZRS), or Read-Access Geo-Zone-Redundant Storage (RA-GZRS) accounts.",
+          "Archive tier is configured at the individual blob level, not as a default setting for the storage account."
+        ],
+        "questionKeywords": [
+          "Archive access tier",
+          "lowest-cost tier",
+          "ZRS",
+          "GZRS",
+          "infrequently accessed data"
+        ],
+        "examTraps": [
+          "Trying to apply the Archive tier to blobs in a ZRS or GZRS storage account; the portal or API will throw an error or the tier will not be available."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Archive Access Tier",
+            "awsEquivalent": "Amazon S3 Glacier Flexible Retrieval / Deep Archive",
+            "keyDifferences": "S3 Glacier can be used with standard geo-dispersed S3 buckets. In Azure, Archive tier cannot be used if the storage account uses ZRS or GZRS redundancy."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "Blob Lifecycle Management Logic",
+        "whyItMatters": "Lifecycle management automates storage tiering and deletion. Understanding the execution priority when multiple rules overlap prevents accidental data deletion or extra costs.",
+        "coreKnowledgePatterns": [
+          "If multiple conflicting lifecycle actions are defined on the same blob (e.g., delete vs. archive), lifecycle management applies the least expensive action (delete is cheaper than archive, and archive is cheaper than cool).",
+          "Lifecycle policies are evaluated once a day at the storage account level.",
+          "Policies use filters like blobTypes (typically blockBlob) and prefixMatch (specifying containers/folders)."
+        ],
+        "questionKeywords": [
+          "lifecycle management",
+          "automatically move",
+          "least expensive action",
+          "daysAfterModificationGreaterThan"
+        ],
+        "examTraps": [
+          "Believing a blob can be moved to a cooler tier after it has already been moved to Archive (Archive is already a lower-cost tier than Cool).",
+          "Forgetting that prefixMatch filter paths are case-sensitive and must match container names exactly."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Blob Lifecycle Management",
+            "awsEquivalent": "Amazon S3 Lifecycle Policies",
+            "keyDifferences": "Both use rules based on age (days since creation or modification) to transition objects to cooler tiers (Standard-IA/Glacier) or expire them."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-06",
+        "topicName": "Storage Access Control & Delegated Access (SAS)",
+        "whyItMatters": "Implementing secure least-privilege access is a major exam focus. Combining RBAC/Azure AD with SAS allows secure external and application-level access.",
+        "coreKnowledgePatterns": [
+          "Access Keys provide full root access to the entire storage account and should be protected. If a secure, limited-time permission is needed, use a Shared Access Signature (SAS).",
+          "A Shared Access Signature (SAS) can limit access to specific services (Blob, File, Queue, Table), specific resource types (Service, Container, Object), and specific operations (Read, Write, List, Delete) over a set timeframe.",
+          "SAS can be restricted to specific IP addresses (e.g., a CIDR range) and secure protocols (HTTPS only).",
+          "If a client uses an IP outside the allowed SAS IP range, they will have no access."
+        ],
+        "questionKeywords": [
+          "Shared access signature",
+          "SAS",
+          "Access keys",
+          "securely by name",
+          "allowed IP addresses"
+        ],
+        "examTraps": [
+          "Failing to restrict a SAS to HTTPS-only when secure transit is required.",
+          "Using Access Keys for third-party integrations instead of a scoped SAS token."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Shared Access Signature (SAS)",
+            "awsEquivalent": "Amazon S3 Presigned URLs",
+            "keyDifferences": "S3 Presigned URLs grant temporary access to a single S3 object. An Azure SAS can be much broader, granting access to multiple services, tables, files, or queues in a single token."
+          },
+          {
+            "azureConcept": "Access Keys",
+            "awsEquivalent": "AWS IAM Access Key ID / Secret Access Key",
+            "keyDifferences": "AWS Access Keys belong to an IAM User. Azure Storage Access Keys are account-level root keys (Primary/Secondary) that grant full access to that specific storage account."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-08",
+        "topicName": "AzCopy & Offline Data Migration Services",
+        "whyItMatters": "Data migration options are selected based on size and network bandwidth. AzCopy handles online scripting, while Import/Export service handles physical disk shipping.",
+        "coreKnowledgePatterns": [
+          "AzCopy v10 supports Blob and File services but does not support Table and Queue.",
+          "AzCopy can authenticate using Azure AD (OAuth) or SAS tokens for Blob storage, but ONLY SAS tokens are supported for File storage.",
+          "When copying blobs between different storage accounts with AzCopy, you must append a SAS token to the source URL.",
+          "The Import/Export Service uses the WAImportExport tool on-premises to encrypt drives using BitLocker, prepare drive journals, and securely ship them to an Azure datacenter.",
+          "Import jobs support Blob and File storage, while Export jobs support Blob storage ONLY."
+        ],
+        "questionKeywords": [
+          "AzCopy",
+          "Import/Export job",
+          "destination of the imported data",
+          "WAImportExport",
+          "BitLocker"
+        ],
+        "examTraps": [
+          "Selecting Azure AD authentication for AzCopy when copying data to Azure Files (SAS is required).",
+          "Selecting Table or Queue as a destination for an Import/Export job (only Blob and File are supported)."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "AzCopy",
+            "awsEquivalent": "AWS CLI (aws s3 cp / sync)",
+            "keyDifferences": "AzCopy is a dedicated, optimized command-line executable. The AWS CLI handles all services including S3 copies."
+          },
+          {
+            "azureConcept": "Import/Export Service",
+            "awsEquivalent": "AWS Snowball / Snowcone",
+            "keyDifferences": "AWS Snowball provides a proprietary secure appliance. Azure Import/Export requires the customer to purchase and ship their own physical SATA hard drives."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source A: AZ-104 exam1.pdf - Question #12",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "Your company has a Microsoft Azure subscription. The company has datacenters in Los Angeles and New York. You are configuring the two datacenters as geo-clustered sites for site resiliency. You need to recommend an Azure storage redundancy option. You have the following data storage requirements:\n✑ Data must be stored on multiple nodes.\n✑ Data must be stored on nodes in separate geographic locations.\n✑ Data can be read from the secondary location as well as from the primary location.\nWhich of the following Azure stored redundancy options should you recommend?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Geo-redundant storage"
+          },
+          {
+            "id": "opt_b",
+            "text": "Read-only geo-redundant storage"
+          },
+          {
+            "id": "opt_c",
+            "text": "Zone-redundant storage"
+          },
+          {
+            "id": "opt_d",
+            "text": "Locally redundant storage"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Read-only geo-redundant storage (RA-GRS) allows you to achieve higher availability for read requests by providing read-only access to the data replicated to the secondary geographic region. Regular Geo-redundant storage (GRS) replicates data cross-regionally but does not support secondary reads unless a failover is initiated, Zone-redundant storage (ZRS) replicates across zones in a single region synchronously but is not geographically separated, and Locally redundant storage (LRS) is confined to a single datacenter, making RA-GRS the only correct option."
+      },
+      {
+        "id": "q2",
+        "source": "Source A: AZ-104 exam1.pdf - Question #4",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure Storage account named storage1. You have an Azure App Service app named App1 and an app named App2 that runs in an Azure container instance. Each app uses a managed identity. You need to ensure that App1 and App2 can read blobs from storage1. The solution must meet the following requirements:\n✑ Minimize the number of secrets used.\n✑ Ensure that App2 can only read from storage1 for the next 30 days.\nWhat should you configure in storage1 for each app?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "App1: Access keys; App2: Access keys"
+          },
+          {
+            "id": "opt_b",
+            "text": "App1: Access keys; App2: Shared access signature (SAS)"
+          },
+          {
+            "id": "opt_c",
+            "text": "App1: Shared access signature (SAS); App2: Access keys"
+          },
+          {
+            "id": "opt_d",
+            "text": "App1: Shared access signature (SAS); App2: Shared access signature (SAS)"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "A Shared Access Signature (SAS) is ideal for App2 because it provides granular delegated access with an explicit start and expiration time (limiting it to 30 days) and specific permissions. App1 has no time-bound or restricted scope requirements, so configuring Access Keys (or utilizing Azure AD role assignments) is appropriate. Since the goal is to fulfill the specific 30-day read limit for App2 and minimize secrets, App1 uses Access Keys and App2 uses a SAS."
+      },
+      {
+        "id": "q3",
+        "source": "Source A: AZ-104 exam1.pdf - Question #5",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You need to create an Azure Storage account that meets the following requirements:\n✑ Minimizes costs\n✑ Supports hot, cool, and archive blob tiers\n✑ Provides fault tolerance if a disaster affects the Azure region where the account resides\nHow should you complete the command? (Select the best combination of Account Kind and Replication SKU)",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Account kind: Storage; Replication SKU: Standard_LRS"
+          },
+          {
+            "id": "opt_b",
+            "text": "Account kind: StorageV2; Replication SKU: Standard_LRS"
+          },
+          {
+            "id": "opt_c",
+            "text": "Account kind: StorageV2; Replication SKU: Standard_GRS"
+          },
+          {
+            "id": "opt_d",
+            "text": "Account kind: BlobStorage; Replication SKU: Standard_GRS"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "General-purpose v2 (StorageV2) accounts deliver the lowest per-gigabyte capacity prices for Azure Storage and fully support hot, cool, and archive blob tiers, whereas legacy General-purpose v1 (Storage) accounts do not support tiering. Standard_GRS (Geo-redundant storage) replicates data to a secondary region asynchronously to protect against region-wide outages, meeting the fault tolerance requirement. Locally-redundant storage (Standard_LRS) is incorrect because it replicates only within a single datacenter and cannot survive an entire regional disaster."
+      },
+      {
+        "id": "q4",
+        "source": "Source A: AZ-104 exam1.pdf - Question #15",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains the storage accounts shown in the following table:\n- storage1: StorageV2, Premium, LRS\n- storage2: StorageV2, Standard, LRS\n- storage3: StorageV2, Standard, GRS\n- storage4: BlobStorage, Premium, LRS\nYou need to identify which storage account can be converted to zone-redundant storage (ZRS) replication by requesting a live migration from Azure support. What should you identify?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "storage1"
+          },
+          {
+            "id": "opt_b",
+            "text": "storage2"
+          },
+          {
+            "id": "opt_c",
+            "text": "storage3"
+          },
+          {
+            "id": "opt_d",
+            "text": "storage4"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "ZRS currently supports standard general-purpose v2, FileStorage, and BlockBlobStorage storage account types. Live migration from LRS to ZRS is only supported for standard storage accounts; premium accounts like storage1 and storage4 must be migrated manually. Additionally, live migration is supported only for accounts that use LRS replication, meaning GRS accounts like storage3 must first be changed to LRS before initiating a live migration, making storage2 (standard, GPv2, LRS) the only eligible account."
+      },
+      {
+        "id": "q5",
+        "source": "Source A: AZ-104 exam1.pdf - Question #25",
+        "relatedKeyPointId": "kp-08",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure Storage account named storage1 that uses Azure Blob storage and Azure File storage. You need to use AzCopy to copy data to the blob storage and file storage in storage1. Which authentication method should you use for each type of storage?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Blob storage: Both Azure AD and SAS token; File storage: Only Shared Access Signature (SAS) token"
+          },
+          {
+            "id": "opt_b",
+            "text": "Blob storage: Only Azure AD; File storage: Only Shared Access Signature (SAS) token"
+          },
+          {
+            "id": "opt_c",
+            "text": "Blob storage: Both Azure AD and SAS token; File storage: Both Azure AD and SAS token"
+          },
+          {
+            "id": "opt_d",
+            "text": "Blob storage: Only Shared Access Signature (SAS) token; File storage: Only Shared Access Signature (SAS) token"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "AzCopy supports both Azure Active Directory (AD) and Shared Access Signature (SAS) token authentication methods when interacting with Azure Blob storage. However, for Azure Files storage, AzCopy does not support Azure AD authentication and requires a Shared Access Signature (SAS) token for authorization, making option A the only correct configuration."
+      },
+      {
+        "id": "q6",
+        "source": "Source A: AZ-104 exam1.pdf - Question #60",
+        "relatedKeyPointId": "kp-08",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription named Subscription1. You have 5 TB of data that you need to transfer to Subscription1. You plan to use an Azure Import/Export job. What can you use as the destination of the imported data?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Azure Blob Storage"
+          },
+          {
+            "id": "opt_b",
+            "text": "Azure Data Lake Store"
+          },
+          {
+            "id": "opt_c",
+            "text": "Azure SQL Database"
+          },
+          {
+            "id": "opt_d",
+            "text": "A virtual machine"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "The Azure Import/Export service is designed to securely transfer large amounts of data to Azure Storage by shipping physical disk drives to an Azure datacenter. The supported storage types for import jobs are Azure Blob storage (block/page/append blobs) and Azure File storage. It does not support importing directly into Azure Data Lake Store, Azure SQL Database, or directly attaching/writing to virtual machine disks, making Azure Blob Storage the correct destination option."
+      },
+      {
+        "id": "q7",
+        "source": "Source A: AZ-104 exam1.pdf - Question #62",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains the storage accounts shown in the following table:\n- storage1: StorageV2 (GPv2), GZRS\n- storage2: BlobStorage, RA-GRS\n- storage3: BlockBlobStorage, ZRS\nYou need to identify which storage accounts support lifecycle management, and which storage accounts support moving data to the Archive access tier. Which storage accounts should you identify?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Lifecycle management: storage1 and storage2 only; Archive tier: storage2 only"
+          },
+          {
+            "id": "opt_b",
+            "text": "Lifecycle management: storage1, storage2, and storage3; Archive tier: storage2 only"
+          },
+          {
+            "id": "opt_c",
+            "text": "Lifecycle management: storage1, storage2, and storage3; Archive tier: storage1 and storage2 only"
+          },
+          {
+            "id": "opt_d",
+            "text": "Lifecycle management: storage2 only; Archive tier: storage2 only"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Azure Storage lifecycle management policies are supported for block blobs and append blobs in all general-purpose v2, premium block blob, and Blob Storage accounts (meaning storage1, storage2, and storage3 all support lifecycle policies). However, the Archive access tier is currently supported only for storage accounts with Locally Redundant Storage (LRS), Geo-Redundant Storage (GRS), or Read-Access Geo-Redundant Storage (RA-GRS) replication. It is NOT supported for Zone-Redundant Storage (ZRS) or Geo-Zone-Redundant Storage (GZRS) replication, meaning only storage2 (RA-GRS) supports the Archive tier."
+      }
+    ]
+  }
+}

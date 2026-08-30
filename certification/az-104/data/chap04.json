@@ -1,0 +1,451 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 4,
+    "title": "Intersite Connectivity",
+    "sourceBook": "Chap 04 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Virtual Network Peering & Requirements",
+        "summary": "VNet Peering seamlessly connects Azure Virtual Networks using the Microsoft backbone network privately, bypassing the public internet. Peering operates at the software level with low latency and high bandwidth. Key constraints include non-overlapping address spaces, regional vs. global peering limits, and non-disruptive deployment with zero downtime."
+      },
+      {
+        "id": "kp-02",
+        "title": "Peering Nontransitivity & Gateway Transit",
+        "summary": "VNet Peering is fundamentally non-transitive (if A peers with B, and B with C, A cannot talk to C unless explicitly peered). Gateway Transit allows peered spoke VNets to share a VPN or ExpressRoute gateway in a central hub VNet. Spoke networks must select 'Use the remote virtual network's gateway', and the hub VNet must allow 'Use this virtual network's gateway or Route Server'."
+      },
+      {
+        "id": "kp-03",
+        "title": "VPN Gateway Connectivity & SKUs",
+        "summary": "Azure VPN Gateways send encrypted traffic over the public internet to on-premises networks (Site-to-Site, Point-to-Site) or other VNets (VNet-to-VNet). VNet-to-VNet VPN has higher latency, requires public IPs, and has a 30-45 minute deployment time compared to peering. Gateway high availability is achieved via active-standby or active-active configurations using multiple public IPs."
+      },
+      {
+        "id": "kp-04",
+        "title": "S2S Tunneling & Route-Based VPNs",
+        "summary": "Site-to-Site (S2S) VPNs utilize IPsec/IKE tunnels. Route-based VPNs direct traffic using forwarding tables (any-to-any traffic selectors) and require IKEv2 to support multiple S2S tunnels. Policy-based VPNs encrypt/decrypt traffic using defined policy combinations and are limited to a single S2S tunnel with static routing."
+      },
+      {
+        "id": "kp-05",
+        "title": "ExpressRoute Connections & Gateways",
+        "summary": "ExpressRoute extends on-premises networks into the Microsoft cloud via private, dedicated L3 connections managed by connectivity partners, bypassing the internet. Gateways translate private VNet traffic over ExpressRoute circuits. High-performance SKUs like ErGw3Az support availability zones and FastPath, which routes data path traffic directly to VMs to bypass the gateway."
+      },
+      {
+        "id": "kp-06",
+        "title": "Coexisting Connections (ExpressRoute & VPN Failover)",
+        "summary": "To implement Site-to-Site VPN as a backup failover for ExpressRoute, both gateways must coexist on the same GatewaySubnet within the VNet. The deployment sequence requires configuring the existing gateway subnet, deploying a VPN Gateway, creating a Local Network Gateway representing on-premises VPN devices, and establishing a VPN Connection."
+      },
+      {
+        "id": "kp-07",
+        "title": "Azure Virtual WAN",
+        "summary": "Virtual WAN is a centralized hub-and-spoke networking service that unifies S2S VPN, P2S VPN, ExpressRoute, and VNet Peering into a single dashboard and backbone architecture. Basic Virtual WAN supports S2S VPN only, while Standard Virtual WAN supports ExpressRoute, P2S, S2S, inter-hub, and VNet-to-VNet through a virtual hub."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "Virtual Network Peering Prerequisites",
+        "whyItMatters": "Overlapping IP ranges will block peering creation. Candidates must immediately recognize address space conflicts and change the VNet address space before peer setup.",
+        "coreKnowledgePatterns": [
+          "Non-overlapping address spaces are mandatory for peering.",
+          "Peering does not require downtime or resource recreation.",
+          "Traffic travels over Microsoft's private global backbone, not the internet.",
+          "Global VNet Peering connects VNets across different regions, Regional connects within the same region."
+        ],
+        "questionKeywords": [
+          "peer VNet1 to VNet2",
+          "overlapping address space",
+          "peering connection",
+          "modify address space first"
+        ],
+        "examTraps": [
+          "Assuming peering can proceed if IP spaces only partially overlap; any overlap blocks configuration completely.",
+          "Thinking a gateway subnet is required to configure basic peering; peering is direct and does not use gateways."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Virtual Network Peering",
+            "awsEquivalent": "VPC Peering",
+            "keyDifferences": "Azure VNet Peering allows seamless cross-region (Global) and cross-subscription/tenant peering without needing VPC Peering Connections or separate routing configurations in quite the same manual way. Both are non-transitive and prohibit overlapping CIDRs."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-02",
+        "topicName": "Peering Transitivity & Gateway Transit",
+        "whyItMatters": "Hub-and-spoke architectures are standard. Spoke VNets can leverage a single expensive VPN/ExpressRoute gateway in the Hub, saving substantial cost.",
+        "coreKnowledgePatterns": [
+          "Peering is strictly non-transitive: Spoke A cannot talk to Spoke B through Hub H unless a route table or direct peering is established.",
+          "Gateway Transit allows spokes to use the Hub gateway for Site-to-Site, Point-to-Site, and ExpressRoute traffic.",
+          "The hub peering link must configure Allow Gateway Transit; the spoke peering link must configure Use Remote Gateways."
+        ],
+        "questionKeywords": [
+          "packets from VNET2 can be routed to",
+          "gateway transit is disabled",
+          "unable to connect point-to-site client to peered VNet",
+          "use the remote virtual network's gateway"
+        ],
+        "examTraps": [
+          "Believing that enabling gateway transit on the Hub is enough; the spoke must also explicitly check 'Use Remote Gateways'.",
+          "Forgetting that VPN clients must have their client configuration package downloaded and re-installed after any peering changes to route traffic to peered spokes."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Peering Non-transitivity & Gateway Transit",
+            "awsEquivalent": "Transit Gateway (TGW) vs VPC Peering",
+            "keyDifferences": "VPC Peering in AWS is strictly non-transitive and does not support transit gateway routing natively. In AWS, transitive routing requires AWS Transit Gateway (TGW). Azure natively supports a limited transitivity model via Hub-Spoke gateway transit without a full Transit WAN (until Virtual WAN is used)."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "VPN Gateway Architecture & Reliability",
+        "whyItMatters": "S2S and VNet-to-VNet connections represent standard hybrid and intersite connectivity. Knowing when to choose peering over VPN is heavily tested on cost and performance criteria.",
+        "coreKnowledgePatterns": [
+          "VPN Gateways require a dedicated subnet named 'GatewaySubnet'.",
+          "VNet-to-VNet VPN runs encrypted over the public internet, whereas VNet Peering runs unencrypted at the software layer over the private backbone.",
+          "VNet-to-VNet deployment takes 30-45 minutes and is limited by gateway SKUs, while peering has no bandwidth limit.",
+          "Active-active VPN gateways require 2 public IP addresses on the Azure side, and active-active setups on both sides require 4 public IPs (2 Azure, 2 on-premises)."
+        ],
+        "questionKeywords": [
+          "VNet-to-VNet connection",
+          "active-active VPN gateway",
+          "local network gateways",
+          "public IP addresses required",
+          "GatewaySubnet"
+        ],
+        "examTraps": [
+          "Selecting a Basic Load Balancer when HA ports are required; HA ports require a Standard Load Balancer.",
+          "Configuring multiple VPN gateways in a single virtual network; only 1 VPN gateway is permitted per VNet."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "VPN Gateway (active-active configuration)",
+            "awsEquivalent": "Virtual Private Gateway (VGW) & AWS Site-to-Site VPN",
+            "keyDifferences": "AWS Virtual Private Gateways inherently provide dual-tunnel redundancy (active-active endpoints) for S2S VPNs out of the box. In Azure, active-active is a distinct deployment configuration that assigns two distinct public IPs to a single gateway resource and requires active-active support on the on-premises device."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Route-Based vs Policy-Based S2S VPNs",
+        "whyItMatters": "Multi-site tunnels are impossible with policy-based (IKEv1) gateways due to protocol constraints. Route-based gateways are standard for modern hybrid enterprise architectures.",
+        "coreKnowledgePatterns": [
+          "Policy-based VPNs use static routing, support IKEv1, and are restricted to a single S2S tunnel.",
+          "Route-based VPNs use dynamic routing (BGP) or static forwarding tables, support IKEv2, and allow up to 10 coexisting S2S connections.",
+          "IKEv2 is required for route-based configurations and any multi-site connectivity."
+        ],
+        "questionKeywords": [
+          "route-based Site-to-Site VPN",
+          "tunneling protocol",
+          "IKEv2",
+          "multiple S2S connections"
+        ],
+        "examTraps": [
+          "Choosing IKEv1 for a route-based multi-site VPN; IKEv1 only supports a single policy-based S2S tunnel.",
+          "Using policy-based routing when connecting multiple branch offices to a single VNet gateway."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Route-Based S2S VPN (IKEv2)",
+            "awsEquivalent": "Route-Based S2S VPN (VGW / Transit Gateway VPN)",
+            "keyDifferences": "AWS VPN supports route-based VPNs using BGP (dynamic) or static routes. AWS supports IKEv1 and IKEv2. In Azure, route-based vs policy-based is selected at gateway creation and governs whether IKEv1/v2 or multi-tunnel S2S is supported."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "ExpressRoute Gateway SKUs & FastPath",
+        "whyItMatters": "High-throughput hybrid pipelines (like DB migrations) require understanding of FastPath and gateway limits to ensure they do not hit bottleneck choke points.",
+        "coreKnowledgePatterns": [
+          "ExpressRoute utilizes a dedicated, private connection via a network provider; the public internet is not involved.",
+          "ExpressRoute gateway SKUs (Standard, HighPerformance, UltraPerformance) govern maximum speed and features.",
+          "ErGw3Az (UltraPerformance with Availability Zones) supports FastPath.",
+          "FastPath bypasses the virtual network gateway on the data path, routing packets directly from the ExpressRoute circuit to the destination VMs, reducing latency."
+        ],
+        "questionKeywords": [
+          "ExpressRoute gateway SKU",
+          "FastPath",
+          "10 Gbps of traffic",
+          "availability zones",
+          "minimize costs"
+        ],
+        "examTraps": [
+          "Selecting ErGw3 (non-Az) when Availability Zone support is required. Gateway SKUs must contain 'Az' for zonal resiliency.",
+          "Thinking FastPath is supported on Standard (ErGw1Az) SKUs; it requires ErGw3Az / UltraPerformance."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "ExpressRoute and ExpressRoute Gateway",
+            "awsEquivalent": "AWS Direct Connect (DX) and Direct Connect Gateway",
+            "keyDifferences": "AWS Direct Connect uses a Direct Connect Gateway (DXGW) to connect DX circuits to VPCs via Private Virtual Interfaces. FastPath in Azure has no direct AWS equivalent, as AWS DX routes directly into the AWS network without an intermediate software translation gateway resource comparable to the Azure ExpressRoute Gateway."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-06",
+        "topicName": "VPN and ExpressRoute Coexistence",
+        "whyItMatters": "Automatic failover design is critical. Site-to-Site VPN acts as a cheaper, secondary connection that automatically picks up traffic if the primary ExpressRoute circuit fails.",
+        "coreKnowledgePatterns": [
+          "Site-to-Site VPN and ExpressRoute can coexist on the same VNet and share the single 'GatewaySubnet'.",
+          "Since ExpressRoute requires a GatewaySubnet, this subnet already exists during the backup VPN deployment.",
+          "Deployment steps: 1. VPN Gateway, 2. Local Network Gateway (representing on-premises VPN device), 3. VPN Connection."
+        ],
+        "questionKeywords": [
+          "automatic failover in case of ExpressRoute failure",
+          "connect VNet1 to on-premises by using S2S VPN",
+          "minimize cost",
+          "actions in sequence"
+        ],
+        "examTraps": [
+          "Attempting to create a second gateway subnet for the VPN gateway; a VNet can only have one GatewaySubnet, which is shared between both ExpressRoute and VPN gateways.",
+          "Re-creating the GatewaySubnet in the S2S VPN backup scenario; it is already present for ExpressRoute."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "VPN and ExpressRoute Coexistence",
+            "awsEquivalent": "Direct Connect with S2S VPN Failover",
+            "keyDifferences": "In AWS, DX with VPN failover is configured by attaching both a Virtual Private Gateway (VGW) or Transit Gateway (TGW) to the DX connection and S2S VPN, managing path priority via BGP prepending or AS PATH attributes. In Azure, both gateways sit on the same GatewaySubnet resource, and route priorities are handled natively by Azure favoring ExpressRoute over VPN routes."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-07",
+        "topicName": "Azure Virtual WAN",
+        "whyItMatters": "For complex multi-site branch topologies, Virtual WAN automates site-to-site connectivity and leverages the massive Azure global backbone network to route inter-office branch traffic.",
+        "coreKnowledgePatterns": [
+          "Virtual WAN replaces the Hub virtual network in a hub-spoke model with a managed virtual hub.",
+          "Basic Virtual WAN is limited to S2S VPN only.",
+          "Standard Virtual WAN connects ExpressRoute, S2S VPN, P2S VPN, inter-hub, and VNet-to-VNet networks through the virtual hub."
+        ],
+        "questionKeywords": [
+          "centrally monitor user activity... wait",
+          "Virtual WAN",
+          "connect branch offices",
+          "hub type Basic vs Standard"
+        ],
+        "examTraps": [
+          "Choosing Basic Virtual WAN when ExpressRoute or Point-to-Site (P2S) client connections are needed; Basic is strictly limited to Site-to-Site VPN.",
+          "Assuming Spokes can be in different regions than their peered hubs in Basic Virtual WAN; Standard is required for global inter-hub transit."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Virtual WAN",
+            "awsEquivalent": "AWS Transit Gateway + AWS Cloud WAN",
+            "keyDifferences": "Azure Virtual WAN is a higher-level orchestration service that packages VPN, ExpressRoute, and routing into a single dashboard. AWS Cloud WAN and AWS Transit Gateway provide similar centralized hub capabilities, but AWS separates DX gateways, VPN endpoints, and TGW route domains into distinct modular components."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 34",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "Peering for VNET2 is configured as shown in the exhibit. Peering for VNET3 is configured as shown in the exhibit. How can packets be routed between the virtual networks?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Packets from VNET1 can be routed to VNET2 and VNET3. Packets from VNET2 can be routed to VNET1 only."
+          },
+          {
+            "id": "opt_b",
+            "text": "Packets from VNET1 can be routed to VNET2 and VNET3. Packets from VNET2 can be routed to VNET1 and VNET3."
+          },
+          {
+            "id": "opt_c",
+            "text": "Packets from VNET1 can be routed to VNET2 only. Packets from VNET2 can be routed to VNET1 only."
+          },
+          {
+            "id": "opt_d",
+            "text": "Packets from VNET1 can be routed to VNET2 and VNET3. Packets from VNET2 can be routed to VNET3 only."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Virtual Network Peering is non-transitive. Since VNET1 is peered with both VNET2 and VNET3 directly, packets from VNET1 can be routed to both VNET2 and VNET3. However, because VNET2 and VNET3 are not peered directly and gateway transit is disabled on the peerings to VNET1, packets from VNET2 can only be routed to VNET1 and cannot transit through VNET1 to reach VNET3."
+      },
+      {
+        "id": "q2",
+        "source": "Source A: AZ-104 exam1.pdf - Question #41",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription named Subscription1 that contains an Azure virtual network named VNet1. VNet1 connects to your on-premises network by using Azure ExpressRoute. You plan to prepare the environment for automatic failover in case of ExpressRoute failure. You need to connect VNet1 to the on-premises network by using a site-to-site VPN. The solution must minimize cost. Which three actions should you perform in sequence?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "1. Create a gateway subnet, 2. Create a VPN gateway, 3. Create a VPN connection."
+          },
+          {
+            "id": "opt_b",
+            "text": "1. Create a VPN gateway, 2. Create a local network gateway, 3. Create a VPN connection."
+          },
+          {
+            "id": "opt_c",
+            "text": "1. Create a local network gateway, 2. Create a VPN connection, 3. Create a gateway subnet."
+          },
+          {
+            "id": "opt_d",
+            "text": "1. Create a gateway subnet, 2. Create a local network gateway, 3. Create a VPN connection."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "When setting up a Site-to-Site VPN as a backup for an existing ExpressRoute connection, the GatewaySubnet already exists because it was created during the initial ExpressRoute deployment. Therefore, to minimize cost and avoid duplicate subnets, you only perform the three remaining steps: create the VPN gateway, create the local network gateway to represent on-premises, and configure the VPN connection."
+      },
+      {
+        "id": "q3",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 83",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You have a virtual network named VNet1 as shown in the exhibit. No devices are connected to VNet1. You plan to peer VNet1 to another virtual network named VNet2. VNet2 has an address space of 10.2.0.0/16. You need to create the peering. What should you do first?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Modify the address space of VNet1."
+          },
+          {
+            "id": "opt_b",
+            "text": "Add a gateway subnet to VNet1."
+          },
+          {
+            "id": "opt_c",
+            "text": "Create a subnet on VNet1 and VNet2."
+          },
+          {
+            "id": "opt_d",
+            "text": "Configure a service endpoint on VNet2."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "A fundamental prerequisite of Virtual Network Peering is that peered networks must have non-overlapping IP address spaces. Since VNet1's current address space overlaps with VNet2's address space of 10.2.0.0/16, the peering cannot be created. You must first modify the address space of VNet1 to ensure they do not overlap before attempting to peer them."
+      },
+      {
+        "id": "q4",
+        "source": "Source A: AZ-104 exam1.pdf - Question #95",
+        "relatedKeyPointId": "kp-05",
+        "questionType": "single-choice",
+        "questionText": "You have an on-premises datacenter and an Azure subscription. You plan to connect the datacenter to Azure by using ExpressRoute. You need to deploy an ExpressRoute gateway. The solution must support up to 10 Gbps of traffic, support availability zones, support FastPath, and minimize costs. Which SKU should you deploy?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "ERGw1AZ"
+          },
+          {
+            "id": "opt_b",
+            "text": "ERGw2"
+          },
+          {
+            "id": "opt_c",
+            "text": "ErGw3"
+          },
+          {
+            "id": "opt_d",
+            "text": "ErGw3AZ"
+          }
+        ],
+        "correctAnswers": [
+          "opt_d"
+        ],
+        "explanation": "The ErGw3AZ SKU represents the Ultra Performance gateway SKU deployed with availability zones. This SKU supports FastPath (which bypasses the gateway for the data path to maximize performance) and can handle up to 10 Gbps of bandwidth, meeting all requested requirements while minimizing cost by matching the minimum SKU that supports FastPath."
+      },
+      {
+        "id": "q5",
+        "source": "Source A: AZ-104 exam1.pdf - Question #103",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "You plan to deploy route-based Site-to-Site VPN connections between several on-premises locations and an Azure virtual network. Which tunneling protocol should you use?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "IKEv1"
+          },
+          {
+            "id": "opt_b",
+            "text": "PPTP"
+          },
+          {
+            "id": "opt_c",
+            "text": "IKEv2"
+          },
+          {
+            "id": "opt_d",
+            "text": "L2TP"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "Route-based VPN connections in Azure require the IKEv2 tunneling protocol. While policy-based connections are restricted to IKEv1 and support only a single Site-to-Site tunnel, route-based connections utilize IKEv2 to support dynamic routing (BGP) and coexisting connections to multiple on-premises locations (up to 10 tunnels)."
+      },
+      {
+        "id": "q6",
+        "source": "Source A: AZ-104 exam1.pdf - Question #149",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You have the Azure virtual networks shown in the following table: VNet1 (Address Space: 10.11.0.0/16, Region: West US), VNet2 (Address Space: 10.11.0.0/17, Region: West US), VNet3 (Address Space: 10.10.0.0/22, Region: East US), VNet4 (Address Space: 192.168.16.0/22, Region: North Europe). Which virtual networks can you peer with VNet1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "VNet2, VNet3, and VNet4"
+          },
+          {
+            "id": "opt_b",
+            "text": "VNet2 only"
+          },
+          {
+            "id": "opt_c",
+            "text": "VNet3 and VNet4 only"
+          },
+          {
+            "id": "opt_d",
+            "text": "VNet2 and VNet3 only"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "To peer virtual networks, they must have non-overlapping IP address spaces. Since VNet2's address space of 10.11.0.0/17 overlaps directly with VNet1's address space of 10.11.0.0/16, peering is blocked between them. VNet3 and VNet4 have non-overlapping address spaces with VNet1 and can be peered successfully (even across regions using Global Peering)."
+      },
+      {
+        "id": "q7",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 94",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You have an on-premises network that contains a database server named dbserver1. You have an Azure subscription. You plan to deploy three Azure virtual machines, each in a separate availability zone. You need to configure an Azure VPN gateway for a Site-to-Site VPN. The solution must ensure high availability across the availability zones. What is the minimum number of public IP addresses, virtual network gateways, and local network gateways that you should configure?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "2 public IP addresses, 1 virtual network gateway, 1 local network gateway"
+          },
+          {
+            "id": "opt_b",
+            "text": "4 public IP addresses, 1 virtual network gateway, 2 local network gateways"
+          },
+          {
+            "id": "opt_c",
+            "text": "4 public IP addresses, 2 virtual network gateways, 2 local network gateways"
+          },
+          {
+            "id": "opt_d",
+            "text": "2 public IP addresses, 2 virtual network gateways, 2 local network gateways"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "To achieve highly available active-active Site-to-Site VPN connections between Azure and on-premises, a single active-active virtual network gateway resource is deployed in Azure (which automatically configures 2 active gateway instances and requires 2 public IPs). On-premises, you must configure 2 local network gateways (each with its own public IP), resulting in 4 public IPs and 2 local network gateways in total."
+      }
+    ]
+  }
+}

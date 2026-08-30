@@ -1,0 +1,530 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 2,
+    "title": "Compliance and Cloud Governance",
+    "sourceBook": "Chap 02 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Azure Regions and Paired Regions",
+        "summary": "Azure's global footprint consists of regions (geographical areas with one or more datacenters connected via a low-latency network). To enforce BCDR and data residency, regions are grouped into regional pairs within the same geography (minimum 300 miles separation preferred). Paired regions feature serialized, sequential platform updates (never updated simultaneously) and prioritized recovery order during massive outages."
+      },
+      {
+        "id": "kp-02",
+        "title": "Azure Accounts, Subscriptions, and Billing Channels",
+        "summary": "Azure Subscriptions serve as logical boundaries for resources, environments, and billing. Billing is computed per subscription. Key subscription acquisition channels include Enterprise Agreements (EAs) which require upfront monetary commitments and offer maximum discounts, Cloud Solution Provider (CSP) partner agreements with monthly invoicing, and Pay-As-You-Go (PAYG) credit card-linked subscriptions."
+      },
+      {
+        "id": "kp-03",
+        "title": "Management Groups Hierarchy",
+        "summary": "Management Groups provide a logical container scope above subscriptions to manage access, policy, and compliance across multiple subscriptions. The hierarchy supports up to four levels of depth, starting from the Tenant Root Group. All role assignments and Azure Policy definitions assigned at a management group automatically inherit down to child subscriptions, resource groups, and individual resources."
+      },
+      {
+        "id": "kp-04",
+        "title": "Resource Groups and Lifecycle Boundaries",
+        "summary": "A Resource Group (RG) is a logical container for resources deployed as a single unit. It serves as a lifecycle boundary (deleting an RG deletes all resources inside). An RG stores resource metadata in its assigned region. If the RG's region is offline, metadata cannot be updated, even if the underlying resources reside in a different, online region."
+      },
+      {
+        "id": "kp-05",
+        "title": "Azure Cost Management & Cost Optimization",
+        "summary": "Azure Cost Management provides cost analysis (grouping and filtering by tags/timespan), cost alerts, and budgets. Budgets can be configured with action groups to trigger automated runbooks (e.g., shutting down VMs). Azure Advisor uses machine learning to generate cost-saving recommendations like resizing underutilized VMs or purchasing Reservations (which save up to 72% over PAYG rates for 1- or 3-year terms)."
+      },
+      {
+        "id": "kp-06",
+        "title": "Apply and Manage Tags",
+        "summary": "Tags are key-value pairs (maximum of 15 pairs per resource or resource group) used to logically organize resources. Important exam behavior: tags applied to a resource group are NOT inherited by resources inside that group. Tags are primarily used for metadata taxonomy, sorting in the portal, and filtering cost breakdowns in Cost Management."
+      },
+      {
+        "id": "kp-07",
+        "title": "Azure Policy and Initiatives",
+        "summary": "Azure Policy enforces corporate standards and compliance. It uses JSON policy definitions containing conditions and effects (e.g., deny, audit, append). Policies are assigned at a specific scope (Management Groups, Subscriptions, or Resource Groups) and can specify subscope exclusions. An Initiative is an administrative grouping of multiple policy definitions managed as a single unit to track compliance against broad standards (e.g., PCI-DSS, ISO 27001)."
+      },
+      {
+        "id": "kp-08",
+        "title": "Resource Locks",
+        "summary": "Locks prevent accidental deletion or modification of critical resources, overriding any RBAC user permissions (even Owner). Lock levels are CanNotDelete (Delete in portal, allows modifications but prevents deletion) and ReadOnly (blocks both modifications and deletion, acting as a Reader-level lock). Locks follow inheritance from subscription down to individual resources."
+      },
+      {
+        "id": "kp-09",
+        "title": "Azure Role-Based Access Control (RBAC)",
+        "summary": "Azure RBAC manages resource access using three elements: Security Principal (Who: user, group, service principal, or managed identity), Role Definition (What: JSON-defined actions/notActions), and Scope (Where: Management Group, Subscription, Resource Group, or Resource). Fundamental roles include Owner (full access + delegation), Contributor (full access, no delegation), Reader (read-only), and User Access Administrator (access delegation only, no resource management)."
+      },
+      {
+        "id": "kp-10",
+        "title": "Custom RBAC Roles",
+        "summary": "Custom roles are created when built-in roles do not satisfy least-privilege requirements. They are defined via JSON with components like Actions, NotActions, DataActions, NotDataActions, and AssignableScopes. AssignableScopes restrict where the role can be assigned (e.g., specific subscriptions or resource groups). If defined at a subscription scope, they cannot be assigned to management groups."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "Azure Regional Pairs & Resiliency Architecture",
+        "whyItMatters": "Regional Pairs represent the bedrock of Azure's disaster recovery and platform maintenance architecture, which is heavily tested in scenario-based questions.",
+        "coreKnowledgePatterns": [
+          "Planned updates are rolled out sequentially (serialized updates) across regional pairs to ensure one region is always online.",
+          "A distance of 300 miles is preferred between regional pairs to protect against concurrent natural disasters.",
+          "Data replication using GRS (Geo-Redundant Storage) is bound to the regional pair.",
+          "During a region-wide outage, Azure prioritizes the recovery of at least one region from each pair to maintain service continuity."
+        ],
+        "questionKeywords": [
+          "geo-clustered",
+          "paired region",
+          "regional pairs",
+          "sequential updates",
+          "data resiliency"
+        ],
+        "examTraps": [
+          "Brazil South is paired with South Central US (outside its geography), but South Central US's paired region is NOT Brazil South.",
+          "West India is paired with South India, but South India's paired region is Central India."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Regional Pairs & Serialized Updates",
+            "awsEquivalent": "Cross-Region Replication & Multi-Region Deployments",
+            "keyDifferences": "AWS does not have a native, platform-defined concept of 'Regional Pairs' with automated sequential platform updates. While AWS supports cross-region replication for storage/databases, the replication target is user-defined, whereas Azure GRS automatically replicates to the hardcoded regional pair."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Management Group Scope and Hierarchy",
+        "whyItMatters": "Azure administrators must structure governance boundaries logically to apply policies and RBAC roles at scale without administrative overhead.",
+        "coreKnowledgePatterns": [
+          "Tenant Root Group is the top-level container; all management groups and subscriptions roll up to it.",
+          "Policies and RBAC role assignments inherit automatically down the hierarchy.",
+          "Management groups support up to six levels of depth (excluding Tenant Root Group and subscriptions).",
+          "Subscriptions can be moved between Management Groups if the administrator has the required RBAC permissions (User Access Administrator or Owner)."
+        ],
+        "questionKeywords": [
+          "Tenant Root Group",
+          "Management group",
+          "inherit",
+          "governance at scale",
+          "moving subscriptions"
+        ],
+        "examTraps": [
+          "Believing that subscriptions moved between management groups lose their inherited assignments. They lose assignments inherited from the source group and immediately inherit assignments from the target group.",
+          "A global administrator does not automatically have access to the Root Management Group; they must explicitly elevate their access to User Access Administrator."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Management Groups & Hierarchy",
+            "awsEquivalent": "AWS Organizations and Organizational Units (OUs)",
+            "keyDifferences": "Azure Management Groups map directly to AWS OUs. Subscriptions map to AWS Accounts. The Tenant Root Group maps to the AWS Organizations Root. Inheritance works similarly for SCPs (AWS) and Azure Policies (Azure)."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Resource Group Metadata & Deletion Lifecycles",
+        "whyItMatters": "Resource Groups serve as the structural framework for resource deployment, deployment tracking, and lifecycle cascading operations.",
+        "coreKnowledgePatterns": [
+          "Resource Groups store resource metadata. The RG region defines where this metadata is stored.",
+          "Resources within an RG can reside in different regions than the RG itself.",
+          "If an RG's region goes down, existing resources in other regions remain unaffected, but metadata updates (deployments, tag changes) are blocked.",
+          "Deleting a Resource Group triggers a cascading deletion of all resources nested inside it."
+        ],
+        "questionKeywords": [
+          "Resource group location",
+          "metadata storage",
+          "cascading deletion",
+          "different regions"
+        ],
+        "examTraps": [
+          "Assuming resources in an RG must be in the same region as the RG. They do not.",
+          "Assuming deleting an RG leaves virtual machine disks orphaned. All resource providers handle cascading deletion, clearing all resources within the group."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Resource Groups as a Lifecycle Boundary",
+            "awsEquivalent": "AWS CloudFormation Stacks & Resource Groups",
+            "keyDifferences": "AWS Resource Groups are tag-based query definitions and do not act as deployable deployment containers or lifecycle boundaries (deleting an AWS Resource Group does not delete resources). AWS CloudFormation Stacks are the closest equivalent for cascade deletion."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "Azure Advisor and Cost Management",
+        "whyItMatters": "Cost optimization is a heavily tested objective on the exam, focusing on identifying waste and automating spending containment.",
+        "coreKnowledgePatterns": [
+          "Azure Advisor identifies underutilized VMs and recommends changing their service tier to standard or cool options.",
+          "Azure Cost Management can ingest AWS costs via connectors to analyze both clouds.",
+          "Budget alerts only trigger email/SMS notifications; they DO NOT stop resource consumption unless linked to an automated action group (e.g., Azure Automation runbook).",
+          "Reservations offer discounts up to 72% over standard PAYG rates for 1- or 3-year upfront or monthly commitments."
+        ],
+        "questionKeywords": [
+          "identify underutilized",
+          "Advisor recommendations",
+          "budget alert",
+          "unattached disks",
+          "cost recommendations"
+        ],
+        "examTraps": [
+          "Believing a budget threshold of 100% automatically shuts down resources. Budgets only notify; you must configure automated actions using Action Groups if shutdown is desired."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Advisor & Cost Management",
+            "awsEquivalent": "AWS Trusted Advisor, AWS Cost Explorer, & AWS Budgets",
+            "keyDifferences": "Azure Advisor cost recommendations directly match AWS Trusted Advisor cost checks. Azure Cost Management maps to AWS Cost Explorer. Azure Budgets behave identically to AWS Budgets, supporting SNS notifications or SSM automated actions."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-06",
+        "topicName": "Resource Tagging and Inheritance Boundaries",
+        "whyItMatters": "Tagging is the primary mechanism for cost allocation, logical taxonomy, and resource categorization in large-scale tenants.",
+        "coreKnowledgePatterns": [
+          "A resource can have a maximum of 15 tag name/value pairs.",
+          "Tags applied to a resource group are NOT inherited by resources inside that group.",
+          "Cost Analysis can group and filter billing data by resource tags.",
+          "Tags are key-value pairs where keys are case-insensitive and values are case-sensitive."
+        ],
+        "questionKeywords": [
+          "department tag",
+          "tag inheritance",
+          "filter by tag",
+          "logically organize",
+          "usage report tag"
+        ],
+        "examTraps": [
+          "Relying on Resource Group tags for resource-level cost tracking. Because tags are not inherited, resource-level costs will not show the RG's tags unless an Azure Policy is assigned to copy/append tags automatically."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Resource Tagging (No Default Inheritance)",
+            "awsEquivalent": "AWS Resource Tagging & Cost Allocation Tags",
+            "keyDifferences": "Both systems require tags to be applied to individual resources for cost tracking. Neither AWS nor Azure automatically propagates parent-level tags (like resource group/logical tags) down to child resources natively without automated policies/scripts."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-07",
+        "topicName": "Azure Policy & Initiatives scoping",
+        "whyItMatters": "Enforcing governance and geo-compliance at scale is key. Policy assignment, compliance dashboards, and the role of initiatives are highly tested.",
+        "coreKnowledgePatterns": [
+          "Policies evaluate existing and new resources. Non-compliant existing resources are reported in the compliance dashboard, but are NOT deleted.",
+          "Policy assignments apply to a scope (Management Group, Subscription, RG, or Resource) and can include exclusions at subscopes.",
+          "Initiatives simplify administration by grouping multiple related policy definitions into a single object.",
+          "The 'Not allowed resource types' built-in policy prevents deployment of specified resource types."
+        ],
+        "questionKeywords": [
+          "policy definition",
+          "exclusions",
+          "non-compliant",
+          "initiative definition",
+          "Not allowed resource types"
+        ],
+        "examTraps": [
+          "Believing Azure Policy can delete non-compliant resources. It cannot delete; it can only block creation (deny) or report (audit).",
+          "Assuming policy definitions created at a subscription level can be assigned to a Management Group. They cannot; definitions must be saved at the Management Group level or higher."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Policy & Initiatives",
+            "awsEquivalent": "AWS Config Rules & AWS Organizations SCPs",
+            "keyDifferences": "Azure Policy combines proactive enforcement (like AWS SCPs blocking actions) and reactive compliance auditing (like AWS Config Rules). Initiatives map directly to AWS Config Conformance Packs or AWS Security Hub Standards."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-08",
+        "topicName": "Resource Locks levels and Inheritance",
+        "whyItMatters": "Locks protect production environments from accidental modification or deletion and override any delegated RBAC privileges.",
+        "coreKnowledgePatterns": [
+          "Locks apply at Subscription, Resource Group, or Resource level.",
+          "Locks follow inheritance: a lock on a Subscription or RG applies to all child resources.",
+          "CanNotDelete lock allows reading and modifying but blocks deletion.",
+          "ReadOnly lock blocks deletion and modifications (equivalent to Reader permissions).",
+          "Locks override RBAC roles: even an Owner cannot delete a locked resource without first deleting the lock."
+        ],
+        "questionKeywords": [
+          "accidental deletion",
+          "CanNotDelete lock",
+          "ReadOnly lock",
+          "lock inheritance",
+          "override Owner permissions"
+        ],
+        "examTraps": [
+          "Attempting to modify a VM (e.g., restarting, resizing) when a ReadOnly lock is applied. This will fail because resizing or stopping requires writing metadata to the resource.",
+          "Thinking a lock blocks normal user-plane data access (e.g., reading SQL data). It only blocks management-plane control operations."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Resource Locks (CanNotDelete / ReadOnly)",
+            "awsEquivalent": "AWS Service Control Policies (SCPs) with explicit Deny & Resource Termination Protection",
+            "keyDifferences": "AWS uses explicit Deny SCPs on `Delete*` or `Update*` APIs to simulate ReadOnly locks. For deletion protection specifically, AWS has termination protection on EC2, RDS, and CloudFormation, but lacks a single, unified 'Resource Lock' object model that covers all resources at a folder/subscription scope natively."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-09",
+        "topicName": "Azure RBAC vs. Azure AD Directory Roles",
+        "whyItMatters": "Understanding the separation of directory administration (Azure AD) from resource management (Azure Resource Manager) is critical.",
+        "coreKnowledgePatterns": [
+          "Azure AD roles manage tenant-level objects (users, groups, domains, branding).",
+          "Azure RBAC roles manage Azure resources (VMs, storage accounts, vnets).",
+          "The User Access Administrator role can delegate resource access but cannot manage the resources themselves.",
+          "The Contributor role can manage resources but cannot assign RBAC roles (no delegation).",
+          "The Reader role provides read-only access to control-plane configurations."
+        ],
+        "questionKeywords": [
+          "rbac assignment",
+          "least privilege",
+          "User Access Administrator",
+          "Contributor",
+          "directory roles vs resource roles"
+        ],
+        "examTraps": [
+          "Assigning an Azure AD 'Global Administrator' directory role to grant permission to create resources in a subscription. A Global Administrator must elevate access to gain User Access Administrator permissions on the Root Management Group to assign themselves subscription roles."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure RBAC & Role Assignments",
+            "awsEquivalent": "AWS IAM Roles and Policies",
+            "keyDifferences": "AWS IAM merges directory control and resource access control into a single IAM console. Azure strictly separates control: Azure AD Roles manage directory users/groups, while Azure RBAC manages cloud resources across resource groups/subscriptions using scoped role assignments."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-10",
+        "topicName": "Custom Role Definitions & Scope Matching",
+        "whyItMatters": "Defining granular custom roles in JSON format is heavily tested, focusing on parsing permission objects and scoping constraints.",
+        "coreKnowledgePatterns": [
+          "Custom roles are defined via JSON with Actions, NotActions, DataActions, and AssignableScopes.",
+          "NotActions are subtracted from Actions (they do not represent a Deny; they are an exclusion from the allowed list).",
+          "AssignableScopes must point to valid Management Groups, Subscriptions, or Resource Groups where the role is allowed to be assigned.",
+          "If assignableScopes contains a specific subscription ID, the role cannot be assigned in other subscriptions."
+        ],
+        "questionKeywords": [
+          "custom role JSON",
+          "NotActions",
+          "AssignableScopes",
+          "clone role",
+          "Get-AzRoleDefinition"
+        ],
+        "examTraps": [
+          "Confusing NotActions with an IAM Deny. In Azure, if a user is granted permission to delete a resource via another role, a NotActions block in a custom role will NOT block them. Azure RBAC does not support explicit 'Deny' role assignments natively (except via specialized Deny Assignments created by Blueprints/Deployment Stacks)."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Custom Roles, NotActions, & Scopes",
+            "awsEquivalent": "AWS IAM Customer Managed Policies",
+            "keyDifferences": "In AWS, an explicit `Deny` in any attached policy overrides any `Allow`. In Azure RBAC, custom roles only use allow-based permissions; `NotActions` simply excludes permissions from the allowed list in that specific role. Explicit denies do not exist in standard Azure custom roles."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source A: AZ-104 exam1.pdf - Question #1",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "Your company has several departments. Each department has a number of virtual machines (VMs). The company has an Azure subscription that contains a resource group named RG1. All VMs are located in RG1. You want to associate each VM with its respective department. What should you do?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Create Azure Management Groups for each department."
+          },
+          {
+            "id": "opt_b",
+            "text": "Create a resource group for each department."
+          },
+          {
+            "id": "opt_c",
+            "text": "Assign tags to the virtual machines."
+          },
+          {
+            "id": "opt_d",
+            "text": "Modify the settings of the virtual machines."
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "Assigning tags to the virtual machines is the correct answer because tags are key-value metadata pairs designed logically to organize and categorize resources across departments within a shared resource group. Creating management groups or new resource groups is incorrect as all VMs must remain in RG1, and modifying VM settings does not provide a metadata classification mechanism."
+      },
+      {
+        "id": "q2",
+        "source": "Source B: AZ-104 exam2.pdf - Question #21",
+        "relatedKeyPointId": "kp-05",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that is used by four departments in your company. The subscription contains 10 resource groups. Each department uses resources in several resource groups. You need to send a report to the finance department. The report must detail the costs for each department. Which three actions should you perform in sequence?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "1. Assign a tag to each resource group. 2. From the Cost analysis blade, filter the view by tag. 3. Download the usage report."
+          },
+          {
+            "id": "opt_b",
+            "text": "1. Assign a tag to each resource. 2. From the Cost analysis blade, filter the view by tag. 3. Download the usage report."
+          },
+          {
+            "id": "opt_c",
+            "text": "1. Assign a tag to each resource. 2. Open the Resource costs blade of each resource group. 3. Download the usage report."
+          },
+          {
+            "id": "opt_d",
+            "text": "1. Assign a tag to each resource group. 2. Open the Resource costs blade of each resource group. 3. Download the usage report."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "The correct sequence is to first assign tags directly to individual resources because tags applied to a resource group are not inherited by resources inside. Second, visit the Cost analysis blade and filter the view by the assigned tags to segregate department costs. Third, download the usage report as a CSV file to share with finance. Option A is incorrect due to tag non-inheritance, and options C/D use non-existent Resource costs blades for cost-filtering reports."
+      },
+      {
+        "id": "q3",
+        "source": "Source A: AZ-104 exam1.pdf - Question #27",
+        "relatedKeyPointId": "kp-05",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription. You have 100 Azure virtual machines. You need to quickly identify underutilized virtual machines that can have their service tier changed to a less expensive offering. Which blade should you use?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Monitor"
+          },
+          {
+            "id": "opt_b",
+            "text": "Advisor"
+          },
+          {
+            "id": "opt_c",
+            "text": "Metrics"
+          },
+          {
+            "id": "opt_d",
+            "text": "Customer insights"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Azure Advisor is the correct tool because it features a dedicated Cost tab that utilizes machine learning on resource telemetry to identify idle or underutilized virtual machines and recommends cost-effective downsizing adjustments. Azure Monitor and Metrics are incorrect as they provide raw performance telemetry but do not directly generate tier-change cost savings recommendations, while Customer Insights is unrelated to resource optimization."
+      },
+      {
+        "id": "q4",
+        "source": "Source B: AZ-104 exam2.pdf - Question #46",
+        "relatedKeyPointId": "kp-08",
+        "questionType": "single-choice",
+        "questionText": "You plan to track resource usage and prevent the deletion of resources. To which resources can you apply locks and tags?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "RG1 and VM1 only"
+          },
+          {
+            "id": "opt_b",
+            "text": "Sub1 and RG1 only"
+          },
+          {
+            "id": "opt_c",
+            "text": "Sub1, RG1, and VM1 only"
+          },
+          {
+            "id": "opt_d",
+            "text": "Tenant Root Group, MG1, Sub1, RG1, and VM1"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "Locks and tags can be applied to Subscriptions, Resource Groups, and individual resources (such as VM1). Option C is correct as it lists all these valid tiers. Option D is incorrect because locks and tags cannot be applied to Tenant Root Groups or Management Groups within Azure Resource Manager."
+      },
+      {
+        "id": "q5",
+        "source": "Source B: AZ-104 exam2.pdf - Question #54",
+        "relatedKeyPointId": "kp-10",
+        "questionType": "single-choice",
+        "questionText": "You configure a custom role. To ensure that users can sign in to virtual machines that are assigned role1, which section of the custom role definition should you modify? To ensure that role1 can be assigned only to a resource group named RG1, which section should you modify?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Modify 'actions' for sign-in; modify 'assignableScopes' for RG1 assignment."
+          },
+          {
+            "id": "opt_b",
+            "text": "Modify 'roletype' for sign-in; modify 'assignableScopes' for RG1 assignment."
+          },
+          {
+            "id": "opt_c",
+            "text": "Modify 'permissions' for sign-in; modify 'assignableScopes' for RG1 assignment."
+          },
+          {
+            "id": "opt_d",
+            "text": "Modify 'actions' for sign-in; modify 'permissions' for RG1 assignment."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "In custom role JSON structures, the 'roletype' element is adjusted when mapping built-in role settings for VM sign-in privileges, while the 'assignableScopes' array is modified to define specific scopes (such as the subscription or resource group RG1 path) where the custom role is permitted for assignment. Options A, C, and D are incorrect because control-plane login profiles are matched through the 'roletype' element, and scope assignment limits are exclusively dictated by 'assignableScopes', not by the 'actions' or 'permissions' blocks."
+      },
+      {
+        "id": "q6",
+        "source": "Source B: AZ-104 exam2.pdf - Question #57",
+        "relatedKeyPointId": "kp-07",
+        "questionType": "single-choice",
+        "questionText": "You create an Azure Policy definition named Policy1. To which Azure resources can you assign Policy1 and which Azure resources can you specify as exclusions from Policy1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Assign to: Subscription1 and RG1 only. Exclude from: VM1 only."
+          },
+          {
+            "id": "opt_b",
+            "text": "Assign to: Tenant Root Group, ManagementGroup1, Subscription1, RG1, and VM1. Exclude from: ManagementGroup1, Subscription1, RG1, and VM1 only."
+          },
+          {
+            "id": "opt_c",
+            "text": "Assign to: ManagementGroup1 and Subscription1 only. Exclude from: RG1 and VM1 only."
+          },
+          {
+            "id": "opt_d",
+            "text": "Assign to: Tenant Root Group, ManagementGroup1, and Subscription1. Exclude from: Tenant Root Group, ManagementGroup1, and Subscription1."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Azure Policy supports assignments at any scope tier, which includes the Tenant Root Group, Management Groups, Subscriptions, Resource Groups, and individual resources (such as VM1). Exclusions can be applied to any nested subscope under the assigned scope. Option B is correct because the assignment can encompass all five tiers, and the exclusion list can target any subscope tier except the assignment scope root itself. Options A, C, and D are incorrect because they artificially restrict assignment capabilities or list invalid exclusion scopes."
+      },
+      {
+        "id": "q7",
+        "source": "Source B: AZ-104 exam2.pdf - Question #67",
+        "relatedKeyPointId": "kp-09",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription named Sub1 that contains two users named User1 and User2. You need to assign role-based access control (RBAC) roles to User1 and User2. The users must be able to perform the following tasks in Sub1:\n* User1 must view the data in any storage account.\n* User2 must assign users the Contributor role for storage accounts.\nThe solution must use the principle of least privilege. Which RBAC role should you assign to each user?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "User1: Reader. User2: Owner."
+          },
+          {
+            "id": "opt_b",
+            "text": "User1: Reader and Data Access. User2: User Access Administrator."
+          },
+          {
+            "id": "opt_c",
+            "text": "User1: Storage Account Contributor. User2: User Access Administrator."
+          },
+          {
+            "id": "opt_d",
+            "text": "User1: Reader and Data Access. User2: Owner."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "User1 must view storage account data, which is supported by 'Reader and Data Access' as it permits control-plane configuration viewing and data-plane access via keys. User2 requires the ability to assign permissions (Contributor role), which is delegated via the 'User Access Administrator' role without granting administrative control-plane resource write access. This combination adheres to the principle of least privilege. Options A and D are incorrect because the 'Owner' role represents excessive privilege for User2, while a standard 'Reader' role (Option A) lacks required data-plane access for User1."
+      }
+    ]
+  }
+}

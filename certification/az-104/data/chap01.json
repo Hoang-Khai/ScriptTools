@@ -1,0 +1,451 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 1,
+    "title": "Managing Azure Active Directory & Governance",
+    "sourceBook": "Chap 01 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Azure AD Fundamentals & Core Architecture",
+        "summary": "Azure Active Directory (Azure AD) is a cloud-based identity and access management (IAM) solution. Unlike on-premises Active Directory Domain Services (AD DS) which utilizes hierarchical structures (OUs) and Kerberos/LDAP protocols, Azure AD is a flat directory service that uses HTTP/HTTPS-based REST APIs and modern protocols like SAML, OpenID Connect (OIDC), and OAuth. Subscriptions act as billing boundaries and map in a strict one-to-one relationship to a single Azure AD tenant (directory), although subscriptions can be migrated between tenants."
+      },
+      {
+        "id": "kp-02",
+        "title": "Azure AD Licensing Editions",
+        "summary": "Azure AD is offered in four tiers: Free, Microsoft 365 Apps, Premium P1, and Premium P2. Free provides basic user/group management and core IAM features. Premium P1 introduces dynamic groups, password writeback, and conditional access. Premium P2 is the top tier, adding advanced Identity Protection (risk-based conditional access) and Identity Governance (Access Reviews). Licenses can be assigned directly to users or at scale via group-based licensing."
+      },
+      {
+        "id": "kp-03",
+        "title": "Directory Synchronization (Azure AD Connect)",
+        "summary": "Azure AD Connect is an on-premises utility installed on a domain controller or domain-joined server (Windows Server 2012 or later) that syncs users, groups, passwords, and devices to Azure AD. Synced users have a directory source of authority on-premises, meaning core identity properties (e.g., JobTitle) can only be updated on-premises and synced up. However, cloud-only attributes like UsageLocation can be modified directly in Azure AD."
+      },
+      {
+        "id": "kp-04",
+        "title": "User, Guest, & Administrative Unit Management",
+        "summary": "Azure AD supports cloud-only identities, directory-synchronized identities, and guest accounts (B2B collaboration). Deleted users are soft-deleted and can be recovered within a 30-day window. To enforce the principle of least privilege at a regional or departmental level, Administrative Units (AUs) are used to subdivide a directory and delegate administrative permissions (e.g., User Administrator) over a restricted scope of users or devices."
+      },
+      {
+        "id": "kp-05",
+        "title": "Group Management & Membership Rules",
+        "summary": "Azure AD supports Security Groups (for resource authorization) and Microsoft 365 Groups (for shared collaboration like email and SharePoint). Groups can have 'Assigned' membership (static manual mapping) or 'Dynamic' membership rules. Dynamic groups use AD queries (e.g., user.department -eq 'Marketing') to automatically manage membership. Dynamic Device groups are only supported within Security Groups."
+      },
+      {
+        "id": "kp-06",
+        "title": "Device Identity & Join Options",
+        "summary": "Devices can connect to Azure AD via two models: Azure AD Registered (BYOD/personal devices utilizing a user's personal account, with no local state change) and Azure AD Joined (corporate-owned devices allowing users to sign in to the local OS using their work/school accounts with native cloud SSO). Administrators can configure additional local administrators on Azure AD joined devices through Device Settings."
+      },
+      {
+        "id": "kp-07",
+        "title": "Self-Service Password Reset (SSPR)",
+        "summary": "SSPR allows users to reset their passwords without IT helpdesk intervention. It can be enabled for None, Selected (specific security groups), or All users. Standard users require at least 1 authentication method, but Administrators always require a minimum of two methods (such as email, mobile phone, or security questions). Importantly, Administrators are restricted from using security questions as a password reset method, and on-premises enterprise/domain administrators synced to Azure AD cannot reset passwords via SSPR."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "Azure AD vs AD DS Core Protocols",
+        "whyItMatters": "The exam heavily tests the architectural shift between legacy AD DS and Azure AD. Candidates must recognize that Azure AD does not support GPOs, OUs, LDAP, or Kerberos.",
+        "coreKnowledgePatterns": [
+          "Azure AD utilizes flat directory structures without Organizational Units (OUs) or Group Policy Objects (GPOs).",
+          "Authentication protocols: Azure AD uses HTTP/HTTPS based SAML, WS-Federation, OIDC, and OAuth, whereas AD DS uses Kerberos and NTLM.",
+          "Querying: Azure AD queries use the Microsoft Graph REST API instead of LDAP."
+        ],
+        "questionKeywords": [
+          "Kerberos",
+          "LDAP",
+          "flat structure",
+          "SAML",
+          "REST API",
+          "directory tenant"
+        ],
+        "examTraps": [
+          "Do not select AD DS or GPOs as solutions for managing native Azure AD cloud devices or directory objects.",
+          "Assuming that installing AD DS on an Azure VM is the same as Azure AD. Running AD DS on a VM is a customer-managed IaaS domain controller, not the Azure AD PaaS service."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Active Directory (Azure AD Tenant)",
+            "awsEquivalent": "AWS IAM / AWS IAM Identity Center & AWS Directory Service",
+            "keyDifferences": "Azure AD is a unified, cloud-native enterprise directory service containing users, groups, and application registration, which also handles SaaS SSO natively. In contrast, AWS IAM is designed strictly for AWS resource authorization. To get directory features in AWS, you must combine AWS IAM Identity Center (formerly AWS SSO) with AWS Directory Service (Managed Active Directory) or an external IdP."
+          },
+          {
+            "azureConcept": "Azure Subscription to Tenant Mapping",
+            "awsEquivalent": "AWS Organization Accounts to IAM Identity Center Mapping",
+            "keyDifferences": "In Azure, multiple subscriptions can trust a single Azure AD tenant (directory) for identity, creating a 1-to-many relationship. This is highly analogous to an AWS Organization where multiple AWS Accounts federate into a single IAM Identity Center instance for unified SSO."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-02",
+        "topicName": "Azure AD Licensing & Governance",
+        "whyItMatters": "Feature availability is highly dependent on licenses. P1 is the threshold for security controls, and P2 is required for advanced governance and threat detection.",
+        "coreKnowledgePatterns": [
+          "Conditional Access, Dynamic Groups, and Password Writeback require Premium P1.",
+          "Identity Protection (risk-based conditional access) and Identity Governance (Access Reviews) require Premium P2.",
+          "Group-based licensing applies to security groups and Microsoft 365 groups with assigned or dynamic membership types."
+        ],
+        "questionKeywords": [
+          "Premium P1",
+          "Premium P2",
+          "conditional access",
+          "access reviews",
+          "identity protection"
+        ],
+        "examTraps": [
+          "Do not try to configure Access Reviews or P2 features when the question states the tenant is licensed with Azure AD Premium P1 or Office 365 E3.",
+          "Licenses can be assigned to security groups or Microsoft 365 groups, but cannot be nested to assign to subgroups."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Group-Based Licensing",
+            "awsEquivalent": "IAM Group Policies",
+            "keyDifferences": "Azure AD allows you to allocate product licenses (like Office 365 or EMS) to an entire security group, automatically provisioning/deprovisioning licenses as users join or leave. AWS IAM has no direct license management; IAM Groups are used purely to apply IAM policies and permission boundaries."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Directory Synchronization and Source of Authority",
+        "whyItMatters": "Coexistence with on-premises directories is a major theme. You must know which attributes can be written in Azure AD versus on-premises for synced accounts.",
+        "coreKnowledgePatterns": [
+          "For synchronized users, the 'Source of Authority' is Windows Server Active Directory.",
+          "Any modifications to identity, contact info, or job details (e.g., JobTitle) for synchronized users must be made in on-premises AD DS.",
+          "UsageLocation is a cloud-only attribute. It can be modified in Azure AD even for synced users."
+        ],
+        "questionKeywords": [
+          "hybrid deployment",
+          "directory synchronized",
+          "source of authority",
+          "JobTitle",
+          "UsageLocation"
+        ],
+        "examTraps": [
+          "Watch out for solutions suggesting you change synced users' job titles directly in the Azure portal\u2014this will fail with a read-only error. Must be changed on-prem.",
+          "Do not forget that synchronized domain administrators cannot use Azure AD SSPR."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure AD Connect",
+            "awsEquivalent": "AWS Directory Service AD Connector / AWS IAM Identity Center Sync",
+            "keyDifferences": "Azure AD Connect replicates user, group, credential, and device hashes into the Azure AD cloud, allowing true offline cloud authentication. AWS AD Connector is merely a proxy that forwards LDAP authentication to on-prem without storing or caching any AD credentials in AWS."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Administrative Units (AUs) vs RBAC Scopes",
+        "whyItMatters": "Delegating management tasks without granting full tenant administrative privileges is a common enterprise requirement.",
+        "coreKnowledgePatterns": [
+          "Administrative Units restrict the scope of directory administrative roles (e.g., User Administrator) to a specific subset of users or devices.",
+          "They do not apply to Azure resource permissions (subscriptions, RGs, VMs) which are managed by Azure RBAC roles."
+        ],
+        "questionKeywords": [
+          "local administrator",
+          "each office",
+          "grant user management permissions",
+          "administrative units"
+        ],
+        "examTraps": [
+          "Do not confuse Administrative Units (Azure AD directory delegation) with Resource Groups or Management Groups (Azure RBAC scope).",
+          "Azure AD tenant roles (e.g., User Administrator) are global by default unless assigned at the AU scope."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Administrative Units",
+            "awsEquivalent": "AWS IAM Identity Center Groups / IAM Policy Conditions",
+            "keyDifferences": "Azure AD AUs act as logical administrative boundaries within a single directory tenant. In AWS IAM, similar isolation is achieved by creating different IAM groups, using IAM permission boundaries, or specifying strict resource tag-based conditions in IAM policies."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "Dynamic Group Membership and Rules",
+        "whyItMatters": "Dynamic group management is essential for automating licensing, application access, and policy scope.",
+        "coreKnowledgePatterns": [
+          "Dynamic groups evaluate rules on user or device attributes (e.g., startsWith, eq, notIn).",
+          "Dynamic Device membership is only supported in Security Groups, not Microsoft 365 Groups.",
+          "Assigned membership is standard manual mapping."
+        ],
+        "questionKeywords": [
+          "dynamic user",
+          "dynamic device",
+          "membership rule",
+          "StartsWith",
+          "Security group"
+        ],
+        "examTraps": [
+          "Dynamic membership is not supported on Free or Office 365 licenses\u2014it strictly requires Premium P1 or P2.",
+          "You cannot configure a Microsoft 365 group to use dynamic device membership."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Dynamic Groups",
+            "awsEquivalent": "AWS Resource Groups / Dynamic IAM Group (Custom Lambda)",
+            "keyDifferences": "Azure AD dynamic groups natively sync users dynamically based on profile attributes. AWS IAM has no native dynamic user group concept\u2014IAM groups are strictly static. Dynamic membership in AWS requires custom Lambda scripts querying AWS Directory Service or Cognito."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-06",
+        "topicName": "Azure AD Join and Device Management",
+        "whyItMatters": "Modern desktop management relies on proper device registration and enrollment profiles.",
+        "coreKnowledgePatterns": [
+          "Azure AD Joined devices allow sign-in using corporate credentials with native single sign-on (SSO).",
+          "Additional local administrators on Azure AD joined devices can be configured in Device Settings from the Devices blade."
+        ],
+        "questionKeywords": [
+          "Azure AD joined",
+          "Azure AD registered",
+          "local administrators",
+          "Devices blade"
+        ],
+        "examTraps": [
+          "Do not look in the Users or Groups blades to configure additional local administrators for joined devices; this setting is located in the Devices blade.",
+          "Do not mistake Azure AD Register (BYOD/personal identity) for Azure AD Join (corporate ownership)."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure AD Join",
+            "awsEquivalent": "AWS WorkSpaces AD Domain Join",
+            "keyDifferences": "Azure AD Join natively connects Windows endpoints directly to the Azure cloud with no Active Directory Domain Controllers needed, enabling cloud management. In AWS, endpoints (like WorkSpaces) must join a traditional Active Directory domain via AWS Directory Service."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-07",
+        "topicName": "Self-Service Password Reset (SSPR) Settings",
+        "whyItMatters": "SSPR reduces helpdesk load, but has strict security boundaries, especially concerning administrators.",
+        "coreKnowledgePatterns": [
+          "SSPR requires 1 method for normal users, but administrators are hardcoded to require 2 methods.",
+          "SSPR for administrators is always enabled automatically.",
+          "Administrators can never use security questions to reset passwords (for security reasons)."
+        ],
+        "questionKeywords": [
+          "password reset",
+          "SSPR",
+          "methods required",
+          "security questions",
+          "on-premises enterprise administrators"
+        ],
+        "examTraps": [
+          "On-premises synchronized enterprise/domain administrators cannot reset passwords in Azure AD using SSPR. They must change them on-premises.",
+          "If a question asks about an administrator attempting SSPR, remember that security questions will not work as a validation method for them."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Self-Service Password Reset (SSPR)",
+            "awsEquivalent": "AWS Cognito User Pool SSPR / IAM User console reset",
+            "keyDifferences": "Azure AD SSPR is an enterprise directory feature for corporate employees. In AWS, IAM users have standard password policies with console-only reset. Multi-factor verification and email/SMS SSPR are native to AWS Cognito, which is built for application customers (comparable to Azure AD B2C)."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source A: AZ-104 exam1.pdf - Question #10 / Source B: AZ-104 exam2.pdf - Question #10",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure Active Directory (Azure AD) tenant that contains 5,000 user accounts. You create a new user account named AdminUser1. You need to assign the User administrator administrative role to AdminUser1. What should you do from the user account properties?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "From the Licenses blade, assign a new license."
+          },
+          {
+            "id": "opt_b",
+            "text": "From the Directory role blade, modify the directory role."
+          },
+          {
+            "id": "opt_c",
+            "text": "From the Groups blade, invite the user account to a new group."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "To assign a directory administrative role (such as User administrator) to an Azure AD user account, you must select Directory role from the user's properties in the Azure portal and modify the role. Assigning a license (Option A) provides cloud product licensing, and inviting the user to a group (Option C) does not delegate directory administrator permissions unless group-based role assignment is pre-configured, making Option B the correct and direct action."
+      },
+      {
+        "id": "q2",
+        "source": "Source A: AZ-104 exam1.pdf - Question #11 / Source B: AZ-104 exam2.pdf - Question #11",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure Active Directory (Azure AD) tenant named contoso.onmicrosoft.com that contains 100 user accounts. You purchase 10 Azure AD Premium P2 licenses for the tenant. You need to ensure that 10 users can use all the Azure AD Premium features. What should you do?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "From the Licenses blade of Azure AD, assign a license."
+          },
+          {
+            "id": "opt_b",
+            "text": "From the Groups blade of each user, invite the users to a group."
+          },
+          {
+            "id": "opt_c",
+            "text": "From the Azure AD domain, add an enterprise application."
+          },
+          {
+            "id": "opt_d",
+            "text": "From the Directory role blade of each user, modify the directory role."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "To enable Premium features for specific users, you must assign the purchased Azure AD Premium licenses directly from the Licenses blade of the Azure Active Directory tenant. Inviting users to a group (Option B) or changing directory roles (Option D) does not distribute product licenses, while adding an enterprise application (Option C) is completely unrelated to license provisioning."
+      },
+      {
+        "id": "q3",
+        "source": "Source A: AZ-104 exam1.pdf - Question #13 / Source B: AZ-104 exam2.pdf - Question #12",
+        "relatedKeyPointId": "kp-06",
+        "questionType": "single-choice",
+        "questionText": "You sign up for Azure Active Directory (Azure AD) Premium. You need to add a user named admin1@contoso.com as an administrator on all the computers that will be joined to the Azure AD domain. What should you configure in Azure AD?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Device settings from the Devices blade"
+          },
+          {
+            "id": "opt_b",
+            "text": "Providers from the MFA Server blade"
+          },
+          {
+            "id": "opt_c",
+            "text": "User settings from the Users blade"
+          },
+          {
+            "id": "opt_d",
+            "text": "General settings from the Groups blade"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "When devices are joined to an Azure AD domain, Azure AD automatically assigns administrative rights on those devices to specific users. To configure additional users (such as admin1@contoso.com) as local administrators across all joined computers, you must configure the 'Additional local administrators on Azure AD joined devices' setting in Device settings under the Devices blade. User settings (Option C), Groups general settings (Option D), and MFA settings (Option B) do not manage local computer administrative privileges."
+      },
+      {
+        "id": "q4",
+        "source": "Source A: AZ-104 exam1.pdf - Question #17 / Source B: AZ-104 exam2.pdf - Question #31",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure Active Directory (Azure AD) tenant named contosocloud.onmicrosoft.com. Your company has a public DNS zone for contoso.com. You add contoso.com as a custom domain name to Azure AD. You need to ensure that Azure can verify the domain name. Which type of DNS record should you create?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "MX"
+          },
+          {
+            "id": "opt_b",
+            "text": "NSEC"
+          },
+          {
+            "id": "opt_c",
+            "text": "PTR"
+          },
+          {
+            "id": "opt_d",
+            "text": "RRSIG"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Azure Active Directory verifies custom domain ownership by checking for either a TXT or an MX record added to the public DNS zone of that domain. Since MX is listed in the options, it is the correct answer. NSEC (Option B), PTR (Option C), and RRSIG (Option D) records are used for DNS security and address mapping, not custom domain verification in Azure AD."
+      },
+      {
+        "id": "q5",
+        "source": "Source A: AZ-104 exam1.pdf - Question #5 / Source B: AZ-104 exam2.pdf - Question #5",
+        "relatedKeyPointId": "kp-07",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure AD tenant and configure self-service password reset (SSPR) for all users with the following settings: Number of methods required to reset is 2, available methods are Mobile phone and Security questions. You have User1 who is a Member, User2 who is a Guest, and User3 who is assigned the User administrator role. Which of the following statements is true regarding SSPR behavior?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "User3 can reset his password using the security questions."
+          },
+          {
+            "id": "opt_b",
+            "text": "As a User Administrator, User3 can add security questions to the reset process."
+          },
+          {
+            "id": "opt_c",
+            "text": "User1 can reset her password using security questions as her only validation method."
+          },
+          {
+            "id": "opt_d",
+            "text": "All synchronized on-premises administrators can reset passwords via SSPR."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Under SSPR rules, User3 is a User Administrator and can configure and manage SSPR settings, including adding security questions. However, administrators can never use security questions to reset passwords (making Option A incorrect), and they are hardcoded to require two methods. Standard users also require two methods under this policy, so User1 cannot reset with questions alone (Option C). On-premises administrators synchronized to Azure AD cannot reset passwords through cloud SSPR (Option D), confirming Option B as correct."
+      },
+      {
+        "id": "q6",
+        "source": "Source A: AZ-104 exam1.pdf - Question #36 / Source B: AZ-104 exam2.pdf - Question #50",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "You have three offices and an Azure subscription that contains an Azure Active Directory (Azure AD) tenant. You need to grant user management permissions to a local administrator in each office. What should you use?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Azure AD roles"
+          },
+          {
+            "id": "opt_b",
+            "text": "administrative units"
+          },
+          {
+            "id": "opt_c",
+            "text": "access packages in Azure AD entitlement management"
+          },
+          {
+            "id": "opt_d",
+            "text": "Azure roles"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Administrative units (AUs) are specifically designed to subdivide an Azure AD directory into regional or departmental boundaries, allowing directory administrators to delegate roles (like User Administrator) scoped only to users or devices inside that AU. Global Azure AD roles (Option A) would grant tenant-wide permissions (violating least privilege), and Azure roles (Option D) are for managing Azure resources rather than Azure AD users, while access packages (Option C) are for user entitlement request flows."
+      },
+      {
+        "id": "q7",
+        "source": "Source A: AZ-104 exam1.pdf - Question #27 / Source B: AZ-104 exam2.pdf - Question #32",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You have a hybrid deployment of Azure Active Directory (Azure AD) that contains User1 (Source of Authority: Azure AD), User2 (Source of Authority: Windows Server Active Directory), and User3 (Source of Authority: Azure AD). You need to modify the JobTitle and UsageLocation attributes for the users. From which users can you modify the attributes directly from Azure AD?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "You can modify JobTitle and UsageLocation for User1, User2, and User3."
+          },
+          {
+            "id": "opt_b",
+            "text": "You can modify JobTitle and UsageLocation for User1 and User3 only."
+          },
+          {
+            "id": "opt_c",
+            "text": "You can modify JobTitle for User1 and User3 only, and UsageLocation for User1, User2, and User3."
+          },
+          {
+            "id": "opt_d",
+            "text": "You can modify JobTitle for User2 only, and UsageLocation for User1, User2, and User3."
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "For directory-synchronized users whose source of authority is on-premises AD DS (like User2), administrative details like JobTitle are read-only in Azure AD and must be modified on-premises to sync up. However, UsageLocation is a cloud-specific attribute, meaning it can be modified directly in the Azure portal/AD for all users, including User2. Therefore, JobTitle can only be edited in Azure AD for User1 and User3, while UsageLocation can be edited for all three users, making Option C the correct choice."
+      }
+    ]
+  }
+}

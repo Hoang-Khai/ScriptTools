@@ -1,0 +1,445 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 7,
+    "title": "Azure Virtual Machines",
+    "sourceBook": "Chap 07 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Virtual Machine Planning & Resizing",
+        "summary": "Covers essential configuration planning decisions prior to deployment (naming limits, operating systems, and location), and critical lifecycle behaviors such as sizing changes. Resizing a VM requires a reboot and cluster compatibility check."
+      },
+      {
+        "id": "kp-02",
+        "title": "Virtual Machine Storage (OS, Temporary, and Data Disks)",
+        "summary": "Azure VMs use three categories of storage: persistent OS disks, non-persistent Temporary disks (Drive D: on Windows, used for page/swap files, erased during maintenance, resizing, or redeployment), and persistent Data disks. Disks can be standard HDD, standard SSD, premium SSD, or Ultra disks, and are typically managed by Microsoft."
+      },
+      {
+        "id": "kp-03",
+        "title": "Virtual Machine Connection Methods (RDP, WinRM, SSH)",
+        "summary": "Administrative connectivity is split by OS type. Windows VMs use GUI-based RDP (TCP 3389) or command-line WinRM over HTTPS (TCP 5986, optionally secured by certificates in Key Vault). Linux VMs use SSH (TCP 22) authenticated via passwords or high-security SSH public/private key pairs."
+      },
+      {
+        "id": "kp-04",
+        "title": "Azure Bastion (Managed PaaS Secure Connectivity)",
+        "summary": "A fully managed platform-as-a-service (PaaS) solution that provides secure RDP/SSH connectivity directly from the Azure portal over SSL (TCP 443). It eliminates the need for public IP addresses on target VMs and avoids the management overhead of hardening jumpbox VMs. Requires a dedicated subnet named 'AzureBastionSubnet' of minimum size /27."
+      },
+      {
+        "id": "kp-05",
+        "title": "High Availability (Availability Sets & Zones)",
+        "summary": "To protect applications against hardware outages, Azure provides logical groupings. Availability Sets protect against localized failures within a single datacenter using Fault Domains (isolated hardware racks) and Update Domains (nodes rebooted together). Availability Zones provide regional isolation across physically separate datacenters."
+      },
+      {
+        "id": "kp-06",
+        "title": "Scaling & Virtual Machine Scale Sets (VMSS)",
+        "summary": "Scaling is divided into vertical scaling (changing instance size, requiring a reboot) and horizontal scaling (adding or removing identical VMs). VMSS automates horizontal scaling based on metrics like CPU usage, supporting both uniform and flexible orchestration models (up to 1,000 instances)."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "VM Configuration Planning & Resizing",
+        "whyItMatters": "Resizing is a common administrative task, but it incurs unavoidable downtime and cluster compatibility limits. VM naming rules have strict OS-specific limitations (Windows up to 15 characters, Linux up to 64 characters) which can disrupt enterprise standards if not planned.",
+        "coreKnowledgePatterns": [
+          "VM naming limits: Windows hosts are strictly capped at 15 characters, Linux hosts support up to 64 characters.",
+          "VM Resizing behavior: Changing the VM size causes an immediate reboot.",
+          "Cluster constraints during resizing: If a VM is in an Availability Set and the new size requires different underlying hardware clusters, all running VMs in that Availability Set must be stopped before resizing.",
+          "Custom deployments of Linux: To install custom roles or configurations (like custom trusted root CAs) post-provisioning, cloud-init scripts can be passed as custom data."
+        ],
+        "questionKeywords": [
+          "resize virtual machines",
+          "cause downtime",
+          "reboot",
+          "ubuntu custom deployment",
+          "cloud-init",
+          "custom-data",
+          "naming",
+          "15 characters"
+        ],
+        "examTraps": [
+          "Believing VM resizing can be done completely online. Fact: The VM will ALWAYS reboot during resizing.",
+          "Thinking any size can be selected dynamically. Fact: If the new size is incompatible with the existing hardware cluster of an Availability Set, all VMs in that set must be stopped first."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure VM Size / Resizing",
+            "awsEquivalent": "EC2 Instance Type / Changing Instance Type",
+            "keyDifferences": "In AWS, changing an instance type on EBS-backed instances simply requires stopping the individual instance, changing the type, and restarting it. In Azure, if the VM is in an Availability Set and requires different host hardware, ALL VMs in that Availability Set must be deallocated first to allow cluster migration."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-02",
+        "topicName": "Virtual Machine Disks and Persistence",
+        "whyItMatters": "The temporary disk (Drive D: on Windows, /dev/sdb on Linux) is completely non-persistent. Relying on it for data storage is an immediate failure in both exam scenarios and real-world architectures. Managed disks are strongly recommended by Microsoft to bypass storage account limits.",
+        "coreKnowledgePatterns": [
+          "OS Disk: Labeled C: in Windows, /dev/sda in Linux. Fully persistent storage.",
+          "Temporary Disk: Labeled D: in Windows, /dev/sdb in Linux. Erased completely on redeployment, deallocation, host migration, or hardware maintenance.",
+          "Disk size limits: Ultra disks support up to 65,536 GB and are available only as data disks. Standard HDD, Standard SSD, and Premium SSD support up to 32,767 GB.",
+          "On-premises VHD preparation: Azure only supports Generation 1 VMs in the VHD format (VHDX is not natively supported for templates) with a fixed size up to 1,023 GB."
+        ],
+        "questionKeywords": [
+          "temporary disk",
+          "drive d",
+          "redeploy vm",
+          "lost files",
+          "convert vhdx",
+          "fixed sized",
+          "generation 1"
+        ],
+        "examTraps": [
+          "Assuming files on Drive D: survive redeployment. Fact: Redeployment moves the VM to a new host, causing absolute loss of all data on the temporary disk (D:). Only Drive C: survives.",
+          "Uploading a VHDX file directly to Azure. Fact: VHDX must be converted to Generation 1, fixed-size VHD format before uploading as an image template."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Temporary Disk (Drive D:)",
+            "awsEquivalent": "EC2 Instance Store",
+            "keyDifferences": "Azure automatically provisions a temporary disk on almost all VM sizes. In AWS, Instance Store volumes are only available on specific instance classes (indicated by 'd' in the name, e.g., m5d.large) and must be explicitly mapped at launch."
+          },
+          {
+            "azureConcept": "Azure Managed Disks",
+            "awsEquivalent": "Amazon EBS (Elastic Block Store)",
+            "keyDifferences": "EBS volumes are independent of EC2 instances and natively managed by AWS, matching Azure Managed Disks where Microsoft handles storage accounts, backup, and encryption behind the scenes."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Administrative Connection Methods",
+        "whyItMatters": "Secure administration requires knowing the specific ports and protocols for each OS, and how to utilize secure secrets management for automated scripting.",
+        "coreKnowledgePatterns": [
+          "Windows Graphical: RDP over TCP port 3389.",
+          "Windows CLI / Scripting: WinRM over HTTPS (TCP port 5986). Certificates for WinRM should be stored in Azure Key Vault and referenced during VM configuration.",
+          "Linux: SSH over TCP port 22. Key pair public/private keys are highly preferred over passwords to prevent brute-force attacks."
+        ],
+        "questionKeywords": [
+          "RDP",
+          "WinRM",
+          "SSH",
+          "3389",
+          "5986",
+          "Key Vault password retrieval"
+        ],
+        "examTraps": [
+          "Using plain text parameters in ARM templates for administrative passwords. Fact: Always retrieve passwords dynamically from Key Vault during deployment using secure references.",
+          "Opening public port 3389 or 22 directly to the Internet. Fact: This is a high-risk security hazard; use Azure Bastion or a hardened jumpbox instead."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "WinRM over HTTPS (TCP 5986)",
+            "awsEquivalent": "Systems Manager (SSM) Run Command / Session Manager",
+            "keyDifferences": "Azure relies on WinRM for native remote PowerShell scripting. AWS Systems Manager (SSM) utilizes an outbound agent to run PowerShell scripts without requiring inbound WinRM ports (5986) or certificate installation on the instance."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Azure Bastion PaaS Secure Access",
+        "whyItMatters": "Azure Bastion is a major security objective on the exam, replacing traditional jumpboxes. It operates over SSL directly in the browser, meaning the administrator's computer does not need a local RDP/SSH client, and target VMs do not need public IP addresses.",
+        "coreKnowledgePatterns": [
+          "PaaS managed: Microsoft handles infrastructure hardening, vulnerability management, and patching.",
+          "Subnet requirement: Must be deployed in a dedicated subnet named exactly 'AzureBastionSubnet' with a prefix of at least /27.",
+          "VNet Peering support: A single Bastion host deployed in a hub network can securely connect to VMs located in peered spoke virtual networks.",
+          "Authentication: Integrates directly with Azure AD and key pair files stored in browser sessions."
+        ],
+        "questionKeywords": [
+          "Bastion",
+          "AzureBastionSubnet",
+          "/27",
+          "no public IP",
+          "connect directly from browser"
+        ],
+        "examTraps": [
+          "Deploying a Bastion host into a standard subnet or choosing a name other than 'AzureBastionSubnet'. Fact: The portal/ARM template will fail validation if the subnet name is not exact.",
+          "Sizing the Bastion subnet too small (e.g., /29 or /30). Fact: The minimum subnet size for Azure Bastion is /27."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Bastion",
+            "awsEquivalent": "AWS EC2 Instance Connect Endpoint (EICE) or AWS Systems Manager Session Manager",
+            "keyDifferences": "Azure Bastion is a persistent provisioning of a managed virtual machine host in a dedicated subnet, billed per hour. AWS SSM Session Manager is a serverless, agent-based service that does not require a bastion subnet, and EC2 Instance Connect Endpoint acts as a managed serverless private gateway, eliminating bastion instance hourly costs."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "High Availability: Fault & Update Domains",
+        "whyItMatters": "Availability Sets manage rack-level hardware failure and maintenance boundaries within a single datacenter, whereas Availability Zones manage datacenter-level outages.",
+        "coreKnowledgePatterns": [
+          "Fault Domains (FD): Protect against physical rack failures (shared power and networking). Max is typically 2 or 3 depending on the region.",
+          "Update Domains (UD): Prevent simultaneous downtime during platform maintenance. Max is 20. Azure reboots only one UD at a time.",
+          "Availability Zones (AZ): Physically separate datacenters in a region. VMs must use managed disks to be deployed into an Availability Zone."
+        ],
+        "questionKeywords": [
+          "Availability Set",
+          "platformFaultDomainCount",
+          "platformUpdateDomainCount",
+          "fabric failure",
+          "Availability Zone",
+          "managed disks"
+        ],
+        "examTraps": [
+          "Configuring more than 20 update domains. Fact: 20 is the absolute platform maximum limit for platformUpdateDomainCount.",
+          "Attempting to deploy a VM with unmanaged disks into an Availability Zone. Fact: Availability Zones strictly require Managed Disks for storage isolation."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Availability Sets",
+            "awsEquivalent": "EC2 Spread Placement Groups",
+            "keyDifferences": "Azure Availability Sets automatically configure Fault and Update Domains. AWS Spread Placement Groups achieve the exact same behavior (distributing instances across separate physical racks with independent power and network)."
+          },
+          {
+            "azureConcept": "Availability Zones",
+            "awsEquivalent": "AWS Availability Zones",
+            "keyDifferences": "Both represent physically isolated datacenters with redundant power, cooling, and network. In AWS, subnets are mapped directly to a specific AZ. In Azure, subnets are regional and span across AZs; the VM itself is assigned to a specific AZ during creation."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-06",
+        "topicName": "Horizontal Scaling and VM Scale Sets (VMSS)",
+        "whyItMatters": "VMSS is the primary tool for deploying scalable, highly available web applications. Understanding autoscale metrics, instance limits, and orchestration modes is highly high-yield.",
+        "coreKnowledgePatterns": [
+          "Orchestration modes: Uniform (identical VM configurations) and Flexible (heterogeneous VM profiles, supports mixing spot and standard instances).",
+          "Autoscale parameters: Scale out (adds instances when metric meets threshold, e.g., CPU > 75%) and Scale in (removes instances, e.g., CPU < 25%).",
+          "Spot Instances: Uses excess capacity at a high discount, but can be evicted with 30 seconds notice if Azure needs the capacity back."
+        ],
+        "questionKeywords": [
+          "virtual machine scale set",
+          "VMSS",
+          "autoscale",
+          "scale out",
+          "scale in",
+          "spot instances"
+        ],
+        "examTraps": [
+          "Thinking a VMSS can scale down to 0 instances when the minimum is set to 2. Fact: Scaling metrics will never violate the configured minimum instance limit.",
+          "Assuming scale-in occurs instantly. Fact: Scale-in rules observe a 'cooldown' or duration period (e.g., must remain below threshold for 10 minutes) before executing VM deletions."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Virtual Machine Scale Sets (VMSS)",
+            "awsEquivalent": "AWS Auto Scaling Groups (ASG)",
+            "keyDifferences": "Both automate horizontal scaling based on metrics or schedules. Azure VMSS flexible orchestration mode allows grouping completely distinct VM types. AWS Auto Scaling Groups achieve this using Launch Templates that support mixed instance types and purchase options (On-Demand and Spot)."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source A: AZ-104 exam1.pdf - Question #28Topic 4",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains a virtual machine named VM1. VM1 hosts a line-of-business application that is available 24 hours a day. VM1 has one network interface and one managed disk. VM1 uses the D4s v3 size. You plan to make the following changes to VM1:\n- Change the size to D8s v3.\n- Add a 500-GB managed disk.\n- Add the Puppet Agent extension.\n- Enable Desired State Configuration Management.\n\nWhich change will cause downtime for VM1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Change the size to D8s v3."
+          },
+          {
+            "id": "opt_b",
+            "text": "Add a 500-GB managed disk."
+          },
+          {
+            "id": "opt_c",
+            "text": "Add the Puppet Agent extension."
+          },
+          {
+            "id": "opt_d",
+            "text": "Enable Desired State Configuration Management."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Changing the size of an Azure virtual machine (resizing) requires the VM to be rebooted, which causes downtime. The other actions—attaching a managed data disk, installing VM extensions like the Puppet Agent, or enabling Desired State Configuration (DSC)—can be performed while the virtual machine remains online and running."
+      },
+      {
+        "id": "q2",
+        "source": "Source A: AZ-104 exam1.pdf - Question #55Topic 4",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure virtual machine named VM1 that runs Windows Server 2019. The VM was deployed using default drive settings. You sign in to VM1 as a user named User1 and perform the following actions:\n- Create files on drive C.\n- Create files on drive D.\n- Modify the screen saver timeout.\n- Change the desktop background.\n\nYou plan to redeploy VM1. Which changes will be lost after you redeploy VM1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "the modified screen saver timeout"
+          },
+          {
+            "id": "opt_b",
+            "text": "the new desktop background"
+          },
+          {
+            "id": "opt_c",
+            "text": "the new files on drive D"
+          },
+          {
+            "id": "opt_d",
+            "text": "the new files on drive C"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "Redeploying a virtual machine moves it to a new Azure host, which erases all data on the temporary disk (Drive D on Windows). Data stored on the OS disk (Drive C), such as the user profile settings (screen saver timeout and desktop background), is persistent and will be preserved during redeployment."
+      },
+      {
+        "id": "q3",
+        "source": "Source A: AZ-104 exam1.pdf - Question #56Topic 4",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription. You have an on-premises virtual machine named VM1. You need to ensure that you can use the disks attached to VM1 as a template for Azure virtual machines. What should you modify on VM1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "the memory"
+          },
+          {
+            "id": "opt_b",
+            "text": "the network adapters"
+          },
+          {
+            "id": "opt_c",
+            "text": "the hard drive"
+          },
+          {
+            "id": "opt_d",
+            "text": "the processor"
+          },
+          {
+            "id": "opt_e",
+            "text": "Integration Services"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "Azure virtual machines only support Generation 1 VMs in the VHD file format with a fixed disk size (up to 1,023 GB). Therefore, you must modify the hard drive by converting it from the VHDX system to VHD, and from a dynamically expanding disk to a fixed-size disk before uploading it to Azure."
+      },
+      {
+        "id": "q4",
+        "source": "Source A: AZ-104 exam1.pdf - Question #72Topic 5",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "You plan to use an Azure Resource Manager template to deploy a virtual network named VNET1 that will use Azure Bastion. Which subnet name and minimum subnet size (CIDR prefix) should you configure in the ARM template?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Subnet name: AzureBastionSubnet; Prefix: 10.10.10.0/27"
+          },
+          {
+            "id": "opt_b",
+            "text": "Subnet name: AzureBastionSubnet; Prefix: 10.10.10.0/29"
+          },
+          {
+            "id": "opt_c",
+            "text": "Subnet name: AzureFirewallSubnet; Prefix: 10.10.10.0/27"
+          },
+          {
+            "id": "opt_d",
+            "text": "Subnet name: LAN01; Prefix: 10.10.10.0/30"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Azure Bastion requires a dedicated subnet named exactly 'AzureBastionSubnet' within the target virtual network. Additionally, this subnet must have a minimum prefix length of /27 to accommodate Bastion's platform-managed routing and scale instances, making Option A correct."
+      },
+      {
+        "id": "q5",
+        "source": "Source A: AZ-104 exam1.pdf - Question #18Topic 1",
+        "relatedKeyPointId": "kp-05",
+        "questionType": "single-choice",
+        "questionText": "Your company has an Azure subscription. You need to deploy a number of Azure virtual machines (VMs) using Azure Resource Manager (ARM) templates. You have been informed that the VMs will be included in a single availability set. You are required to make sure that the ARM template you configure allows for as many VMs as possible to remain accessible in the event of fabric failure or maintenance. Which of the following is the value that you should configure for the platformFaultDomainCount property?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "10"
+          },
+          {
+            "id": "opt_b",
+            "text": "30"
+          },
+          {
+            "id": "opt_c",
+            "text": "The minimum value"
+          },
+          {
+            "id": "opt_d",
+            "text": "The maximum value"
+          }
+        ],
+        "correctAnswers": [
+          "opt_d"
+        ],
+        "explanation": "To maximize VM availability during a fabric failure or hardware maintenance, you should configure the fault domain count to the maximum value supported in the target region (typically 2 or 3). Selecting the maximum value ensures that Azure distributes the virtual machines across as many physical hardware racks (fault domains) as possible."
+      },
+      {
+        "id": "q6",
+        "source": "Source B: AZ-104 exam2.pdf - Question #95",
+        "relatedKeyPointId": "kp-05",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains the virtual machines shown in the following table:\n- VM1: Region West Europe, Generation 2\n- VM2: Region East US, Generation 1\n- VM3: Region West Europe, Generation 1\n\nYou create an Azure Compute Gallery named ComputeGallery1 in West Europe. In ComputeGallery1, you create a virtual machine image definition named Image1 with VM generation set to V1.\nWhich virtual machine's operating system disk can be used as a source for a version of Image1?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "VM1 only"
+          },
+          {
+            "id": "opt_b",
+            "text": "VM2 and VM3 only"
+          },
+          {
+            "id": "opt_c",
+            "text": "VM3 only"
+          },
+          {
+            "id": "opt_d",
+            "text": "VM1, VM2, and VM3"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "To use a VM's OS disk as a source for a gallery image version, both the source disk and the target gallery/image definition must be located in the same region, and their virtual machine generations must match. VM1 is ineligible because it is Generation 2 while Image1 is V1 (Generation 1). VM2 is ineligible because it is in East US while ComputeGallery1 is in West Europe. VM3 is eligible because it is Generation 1 in West Europe, matching both requirements."
+      },
+      {
+        "id": "q7",
+        "source": "Source A: AZ-104 exam1.pdf - Question #5Topic 1",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You are planning to deploy an Ubuntu Server virtual machine to your company's Azure subscription. You are required to implement a custom deployment that includes adding a particular trusted root certification authority (CA). Which of the following should you use to create the virtual machine?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "The New-AzureRmVm cmdlet."
+          },
+          {
+            "id": "opt_b",
+            "text": "The New-AzVM cmdlet."
+          },
+          {
+            "id": "opt_c",
+            "text": "The Create-AzVM cmdlet."
+          },
+          {
+            "id": "opt_d",
+            "text": "The az vm create command."
+          }
+        ],
+        "correctAnswers": [
+          "opt_d"
+        ],
+        "explanation": "To implement custom automated configurations (like installing trusted root CAs) during the deployment of a Linux VM, you can use a cloud-init.txt configuration file. The 'az vm create' CLI command allows you to specify this cloud-init script post-deployment via the '--custom-data' parameter, whereas standard PowerShell cmdlets do not natively support passing cloud-init custom-data in the same simple manner."
+      }
+    ]
+  }
+}

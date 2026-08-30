@@ -1,0 +1,459 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 9,
+    "title": "PaaS Compute Options",
+    "sourceBook": "Chap 09 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Azure App Service Plans & Pricing Tiers",
+        "summary": "Every Azure App Service runs inside an App Service plan, which defines the region, OS (Windows/Linux), and compute resources (CPU, memory, storage) shared by all apps in that plan. Pricing is charged at the plan level, regardless of how many apps are deployed. Tiers are grouped into Free/Shared (shared VMs, no SLA, dev/test), Basic (dedicated VMs, manual scaling up to 3 instances), Standard (production, custom domains, autoscale up to 10 instances, staging slots, backups), Premium (high performance, SSD, autoscale up to 30 instances), and Isolated (native VNet integration, dedicated VMs, up to 100 instances)."
+      },
+      {
+        "id": "kp-02",
+        "title": "Scaling App Service Plans (Scale Up vs. Scale Out)",
+        "summary": "Scaling is handled at the App Service plan level. Scale Up/Down refers to vertical scaling (changing the pricing tier to modify CPU, memory, disk, and premium features). Scale Out/In refers to horizontal scaling (increasing or decreasing the number of VM instances running the app). Autoscaling allows dynamic scaling based on metrics (e.g., CPU utilization) or schedules, and is supported starting from the Standard tier onwards. Basic tier only supports manual scaling, and Free/Shared tiers do not support scaling."
+      },
+      {
+        "id": "kp-03",
+        "title": "Continuous Deployment & Staging Slots",
+        "summary": "Azure App Service supports continuous integration and continuous deployment (CI/CD) from Azure DevOps, GitHub, BitBucket, and Local Git, as well as manual deployment (FTP/S, ZIP Deploy, Azure CLI). Staging slots (available in Standard, Premium, and Isolated tiers) are live apps with their own hostnames. Swapping slots swaps the Virtual IPs to route production traffic to the newly tested version without downtime. Swappable settings include general settings, app settings, connection strings, and certificates; non-swappable settings include custom domains, publishing endpoints, and VNet integration."
+      },
+      {
+        "id": "kp-04",
+        "title": "Custom Domains & Ownership Verification",
+        "summary": "Custom domains (e.g., www.contoso.com) can be mapped to paid App Service plans (Shared tier and higher). To prevent subdomain hijacking, Azure requires domain ownership verification before binding. This verification is performed by creating a TXT record named 'asuid' (or 'asuid.www') in your DNS zone containing the verification ID provided in the Azure portal. Once verified, A records (for root domains, mapping to the App Service IP) or CNAME records (for subdomains, mapping to the azurewebsites.net default URL) are created to route traffic."
+      },
+      {
+        "id": "kp-05",
+        "title": "App Service Backups & Exclusions",
+        "summary": "Backups require Standard or Premium tiers and are stored in a storage account/container within the same subscription. Backups are saved as a .zip file (containing app files and configuration) and an .xml manifest file, and can include connected Azure SQL/MySQL databases. To exclude specific folders (e.g., log files or static media) from being backed up, you must create a custom text file named '_backup.filter' in the 'D:\\home\\site\\wwwroot' folder of the app and specify the relative paths of the directories to exclude."
+      },
+      {
+        "id": "kp-06",
+        "title": "Azure Container Instances (ACI) & Container Groups",
+        "summary": "Azure Container Instances (ACI) represents a serverless PaaS compute service to run containers quickly without managing the underlying virtual machines. ACI supports fast startup times, public IP connectivity, and custom DNS labels. Sizing (CPU, memory) is defined per instance. A container group is a collection of containers scheduled on the same host machine, sharing a lifecycle, local network, and storage volumes (similar to a Kubernetes Pod). Storage is ephemeral unless Azure Files is mounted."
+      },
+      {
+        "id": "kp-07",
+        "title": "Azure Kubernetes Service (AKS) Architecture & Scaling",
+        "summary": "AKS is a managed Kubernetes cluster where Azure manages the master control plane for free, and users only pay for running worker nodes (virtual machines). AKS supports automated rolling upgrades where nodes are cordoned and drained sequentially to eliminate application downtime. Scaling is achieved using Horizontal Pod Autoscaler (HPA) to scale pods based on CPU, Cluster Autoscaler to scale virtual machine nodes when pod capacity is exhausted, and rapid burst scaling using Virtual Kubelets to run pods on serverless ACI instances."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "App Service Plan Consolidation and Limitations",
+        "whyItMatters": "Understanding how App Service plans isolate and bill resources is critical for cost optimization and architecture design on the exam.",
+        "coreKnowledgePatterns": [
+          "Billing is determined solely by the App Service plan (ASP) pricing tier and instance count. It does not matter if there are 0 or 10 apps deployed to the ASP; the price remains identical.",
+          "To host multiple apps on a single plan, they must share the same region and operating system (Windows vs Linux). Plan consolidation minimizes costs but risks resource starvation if one app consumes excessive CPU/memory.",
+          "Basic tier supports dedicated VMs and manual scaling up to 3 instances but has no SLA or autoscale.",
+          "Standard tier unlocks production features: autoscale (up to 10 instances), custom domains, daily backups, and up to 5 deployment slots."
+        ],
+        "questionKeywords": [
+          "minimize costs",
+          "minimum number of App Service plans",
+          "operating system compatibility",
+          "pricing plan"
+        ],
+        "examTraps": [
+          "Deploying a separate App Service plan for every web app is a common distractor that dramatically increases costs on the exam.",
+          "Trying to mix operating systems (e.g. putting a Windows-only ASP.NET 4.8 app on a Linux App Service plan) will fail; they must be deployed on separate operating system plans."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "App Service Plan",
+            "awsEquivalent": "AWS Elastic Beanstalk (with underlying EC2 instance types) or ECS/Fargate Task Definitions",
+            "keyDifferences": "An App Service plan behaves like a dedicated set of EC2 instances managed under an Elastic Beanstalk environment, where you pay for the underlying virtual machines regardless of the number of web applications running inside them."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-02",
+        "topicName": "Autoscale Evaluation Logic and Tier Availability",
+        "whyItMatters": "Autoscale rules are frequently tested with multi-instance metrics and tier limits.",
+        "coreKnowledgePatterns": [
+          "Autoscale requires Standard, Premium, or Isolated pricing tiers. Lower tiers (Basic, Shared, Free) do not support autoscaling.",
+          "Autoscale rules evaluate specific metrics (CPU, Memory, Disk Queue, HTTP Queue Length) over a defined duration and cool-down period.",
+          "Autoscale settings include 'Minimum', 'Maximum', and 'Default' instance limits. Scaling out will never exceed the configured 'Maximum' limit.",
+          "Autoscale evaluates only the configured rule metric. An app experiencing extremely high memory usage will NOT scale out if the autoscale rule is solely configured for CPU Percentage."
+        ],
+        "questionKeywords": [
+          "autoscale rule",
+          "maximum number of instances",
+          "CPU utilization",
+          "Memory utilization"
+        ],
+        "examTraps": [
+          "Watch out for questions where memory is high but the scale-out metric is CPU (or vice versa); if the rule metric is not exceeded, the instance count remains unchanged.",
+          "Free and Shared tiers do not support manual or autoscaling. Basic tier supports manual scaling only."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Autoscale Rules",
+            "awsEquivalent": "AWS EC2 Auto Scaling (Dynamic Scaling Policies based on CloudWatch metrics)",
+            "keyDifferences": "Azure autoscale is configured directly within the App Service Plan blade and can scale based on average, minimum, or maximum of metrics, similar to AWS Auto Scaling scaling policies triggered by CloudWatch alarms."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Deployment Slots & Zero-Downtime Swaps",
+        "whyItMatters": "Deployment slots are standard exam topics, specifically focusing on swappable vs. non-swappable settings.",
+        "coreKnowledgePatterns": [
+          "Deployment slots are fully functional web apps with unique URLs. They require Standard, Premium, or Isolated tiers.",
+          "When swapping slots, Azure swaps the virtual IP addresses (URLs) of the source and destination slots. To roll back a problematic release, simply swap them back to instantly route traffic to the previous version.",
+          "General configuration settings (e.g. general settings, general framework version, app settings, connection strings, public certificates, WebJobs content) are SWAPPED.",
+          "Environment-specific configurations (e.g. custom domain names, publishing endpoints, non-public certificates, scale settings, IP restrictions, diagnostic settings, virtual network integration, managed identities) are NOT SWAPPED."
+        ],
+        "questionKeywords": [
+          "deployment slots",
+          "staging slot",
+          "revert to the previous version",
+          "swap the slots",
+          "scale up"
+        ],
+        "examTraps": [
+          "Assuming that custom domain names are swapped is a classic trap. Domain names are environment-specific and do NOT swap; otherwise, your production URL would swap to staging.",
+          "If the option to create a staging slot is grayed out, the plan must first be scaled up to Standard tier or higher."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Deployment Slots",
+            "awsEquivalent": "AWS Elastic Beanstalk Swap Environment URLs or Route 53 Weighted Routing",
+            "keyDifferences": "Azure App Service deployment slots built-in swap functionality is a direct native equivalent of AWS Elastic Beanstalk Swap Environment URLs, redirecting DNS/CNAME mappings seamlessly under the hood."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Custom Domain Bindings & Ownership Validation",
+        "whyItMatters": "You must understand the exact DNS record prerequisites required to verify and bind custom domains.",
+        "coreKnowledgePatterns": [
+          "To prevent subdomain hijacking, Azure requires domain ownership verification before domain binding is allowed.",
+          "Verifying domain ownership requires creating a TXT record named 'asuid' (or 'asuid.subdomain') with the verification ID provided in the Azure portal.",
+          "To bind a subdomain (e.g., www.contoso.com), you configure a CNAME record pointing to contoso.azurewebsites.net.",
+          "To bind a root domain (e.g., contoso.com), you configure an A record pointing to the App Service incoming public IP address."
+        ],
+        "questionKeywords": [
+          "custom domain name",
+          "verify a custom domain",
+          "TXT record",
+          "CNAME record",
+          "asuid"
+        ],
+        "examTraps": [
+          "Attempting to map a custom domain without creating the 'asuid' TXT record first will fail validation in the portal.",
+          "Mapping a root domain directly to a CNAME is historically invalid in traditional DNS; an A record pointing to the App Service public IP must be used instead."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Custom Domain Bindings",
+            "awsEquivalent": "AWS Route 53 Hosted Zones and ACM (Certificate Manager)",
+            "keyDifferences": "In AWS, Route 53 can map alias records directly to Elastic Beanstalk or CloudFront. Azure requires explicit 'asuid' TXT records to prove ownership before the domain can be bound to the App Service instance."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "App Service Backup Filtering and Exclusions",
+        "whyItMatters": "The exam heavily tests how to configure custom backups and exclude files.",
+        "coreKnowledgePatterns": [
+          "App Service backups require Standard or Premium plans. They are stored in an Azure Storage account in the same subscription.",
+          "Each backup includes configuration settings, file content, and selected connected databases (SQL Database, MySQL, PostgreSQL).",
+          "Excluding files and folders requires placing a custom text file named '_backup.filter' in the web app's 'D:\\home\\site\\wwwroot' directory.",
+          "The '_backup.filter' file uses a simple list of relative paths (e.g., '\\images', '\\logs\\*.log') to specify folders or files to exclude."
+        ],
+        "questionKeywords": [
+          "exclude from the backup",
+          "_backup.filter file",
+          "App Service backup",
+          "Azure Storage account"
+        ],
+        "examTraps": [
+          "Azure Backup Vaults and Recovery Services Vaults are common distractors for App Service backups. App Service uses native storage account backups, NOT Recovery Services vaults.",
+          "Resource locks or storage lifecycle policies cannot perform directory-level or file-level exclusions during the backup process."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "App Service Backup",
+            "awsEquivalent": "AWS EBS Snapshots or AWS Backup for App Runner / Elastic Beanstalk",
+            "keyDifferences": "Azure App Service backups are zip-based file archives written directly to a designated Blob storage container, whereas AWS typically utilizes block-level EBS snapshots or centralized AWS Backup plans."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-06",
+        "topicName": "Azure Container Instances (ACI) Sizing & OS Types",
+        "whyItMatters": "Tested on which container images can run on which PaaS hosting platforms.",
+        "coreKnowledgePatterns": [
+          "Azure Container Instances (ACI) provides a serverless platform to run Docker containers without managing virtual machines.",
+          "Linux container images can run on ACI, Azure Container Apps, and Azure App Service (Linux).",
+          "Windows container images can run on ACI and Azure App Service (Windows), but are NOT supported on Azure Container Apps.",
+          "ACI container groups share a host, lifecycle, network, and storage volumes, resembling a Kubernetes Pod."
+        ],
+        "questionKeywords": [
+          "Azure Container Instances",
+          "container images",
+          "Windows Server container",
+          "Linux container"
+        ],
+        "examTraps": [
+          "Trying to run Windows-based container images (e.g. Nano Server, Server Core) on Azure Container Apps is a common trap because Container Apps only supports Linux containers.",
+          "Remember that Container Instance storage is ephemeral by default; to persist data across container restarts, you must mount an Azure File share."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Container Instances (ACI)",
+            "awsEquivalent": "AWS Fargate (for ECS or EKS)",
+            "keyDifferences": "Both represent serverless container execution. ACI is ideal for quick standalone task executions, while AWS Fargate is typically integrated within a broader ECS/EKS orchestrator control plane."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-07",
+        "topicName": "AKS Node Upgrades and Scaling Architecture",
+        "whyItMatters": "Tests on the mechanics of zero-downtime node pool upgrades and scaling mechanisms.",
+        "coreKnowledgePatterns": [
+          "AKS upgrades are rolling updates. When upgrading, Azure cordons (marks unschedulable) and drains (evicts running pods) one node at a time to migrate workloads to other nodes, minimizing downtime.",
+          "To configure AKS cluster autoscaler, you must enable it on the node pool using the 'az aks update' command or the Azure portal.",
+          "AKS scaling uses three distinct tiers: Horizontal Pod Autoscaler (HPA) to scale pods based on metrics, Cluster Autoscaler to scale virtual machine nodes, and Virtual Kubelets to burst pods onto serverless ACI instances during high demand."
+        ],
+        "questionKeywords": [
+          "AKS cluster",
+          "cluster autoscaler",
+          "cordon and drain",
+          "Virtual Kubelet",
+          "Horizontal Pod Autoscaler"
+        ],
+        "examTraps": [
+          "The 'Set-AzVm' cmdlet is a common distractor for scaling AKS. AKS virtual machines are managed by the service, so you must use 'az aks' or 'Set-AzAks' cmdlets to manage the scale.",
+          "Cordoning a node does not reschedule existing pods automatically; draining the node is what triggers eviction and rescheduling."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "AKS Cluster & Cluster Autoscaler",
+            "awsEquivalent": "AWS EKS (Elastic Kubernetes Service) & Cluster Autoscaler / Karpenter",
+            "keyDifferences": "EKS master nodes have an hourly fee in AWS, whereas AKS control plane is free (excluding Optional SLA SLA-based clusters). Node draining and rolling upgrades are conceptually identical across EKS and AKS."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source A: AZ-104 exam1.pdf - Question #13 Topic 4",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You create an App Service plan named Plan1 and an Azure web app named webapp1. You discover that the option to create a staging slot is unavailable. You need to create a staging slot for Plan1. What should you do first?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "From Plan1, scale up the App Service plan"
+          },
+          {
+            "id": "opt_b",
+            "text": "From webapp1, modify the Application settings"
+          },
+          {
+            "id": "opt_c",
+            "text": "From webapp1, add a custom domain"
+          },
+          {
+            "id": "opt_d",
+            "text": "From Plan1, scale out the App Service plan"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Deployment slots require Standard, Premium, or Isolated pricing tiers. If the App Service plan is currently running on a lower tier (such as Free, Shared, or Basic), the option to create staging slots is unavailable, and you must scale up the plan to Standard or higher first. Option D (scale out) increases instance counts but does not upgrade plan features. Options B and C are application-level settings that do not affect pricing tiers or deployment slot availability."
+      },
+      {
+        "id": "q2",
+        "source": "Source A: AZ-104 exam1.pdf - Question #59 Topic 4",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure web app named App1. App1 has a production slot named webapp1-prod and a staging slot named webapp1-test. In webapp1-test, you test several changes to App1. You back up App1. You swap webapp1-test for webapp1-prod and discover that App1 is experiencing performance issues. You need to revert to the previous version of App1 as quickly as possible. What should you do?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Redeploy App1"
+          },
+          {
+            "id": "opt_b",
+            "text": "Swap the slots"
+          },
+          {
+            "id": "opt_c",
+            "text": "Clone App1"
+          },
+          {
+            "id": "opt_d",
+            "text": "Restore the backup of App1"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "When you swap deployment slots, Azure swaps the virtual IP addresses (URLs) of the source and destination slots. This preserves the previous production code in the staging slot. If performance issues arise, swapping the slots back is the fastest and easiest way to revert the deployment since it instantly redirects traffic to the last known good configuration without requiring a redeployment (Option A) or backup restore (Option D), both of which are slower and cause downtime."
+      },
+      {
+        "id": "q3",
+        "source": "Source A: AZ-104 exam1.pdf - Question #66 Topic 4",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You have web apps in the West US, Central US and East US Azure regions. You have the App Service plans shown in the following table. You plan to create an additional App Service plan named ASP5 that will use the Linux operating system. You need to identify in which of the currently used locations you can deploy ASP5. What should you recommend?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "West US, Central US, or East US"
+          },
+          {
+            "id": "opt_b",
+            "text": "Central US only"
+          },
+          {
+            "id": "opt_c",
+            "text": "East US only"
+          },
+          {
+            "id": "opt_d",
+            "text": "West US only"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Linux App Service plans can be deployed to any region where Azure App Service is available, including West US, Central US, and East US. Because there are no geographic or operating system limitations in these regions that would restrict Linux web app hosting, you can deploy ASP5 to any of the currently used locations (Option A)."
+      },
+      {
+        "id": "q4",
+        "source": "Source B: AZ-104 exam2.pdf - Question #21 Topic 4",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You plan to deploy several web apps. You need to identify what to deploy before you deploy the apps. The solution must minimize Azure costs. What should you identify?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "five Azure Application Gateways"
+          },
+          {
+            "id": "opt_b",
+            "text": "one App Service plan"
+          },
+          {
+            "id": "opt_c",
+            "text": "10 App Service plans"
+          },
+          {
+            "id": "opt_d",
+            "text": "one Azure Traffic Manager"
+          },
+          {
+            "id": "opt_e",
+            "text": "one Azure Application Gateway"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "To minimize Azure costs, you should deploy a single App Service plan to host multiple web applications. Pricing for Azure App Service is charged at the App Service plan level based on provisioned compute resources, not per individual web app. Therefore, consolidated hosting within a single plan minimizes costs as long as the plan has sufficient resources to handle the workload. Creating multiple plans (Option C) or unnecessary gateways (Options A, E) increases costs."
+      },
+      {
+        "id": "q5",
+        "source": "Source A: AZ-104 exam1.pdf - Question #96 Topic 4",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure App Service app named App1 that contains two running instances. You have an autoscale rule configured that scales out by increasing the instance count by 1 when average CPU utilization is greater than 70 percent, with a maximum limit of 5. During a 30-minute period, App1 uses 80 percent of the available memory. What is the maximum number of instances for App1 during the 30-minute period?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "2"
+          },
+          {
+            "id": "opt_b",
+            "text": "3"
+          },
+          {
+            "id": "opt_c",
+            "text": "4"
+          },
+          {
+            "id": "opt_d",
+            "text": "5"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "The autoscale rule is specifically configured to evaluate CPU utilization to trigger a scale-out event. Although memory utilization reaches 80% during the 30-minute period, there is no autoscale rule configured for memory. Since the CPU threshold is not breached, the scale-out action is never triggered, and the instance count remains at its original value of 2 (Option A)."
+      },
+      {
+        "id": "q6",
+        "source": "Source B: AZ-104 exam2.pdf - Question #39",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "You need to configure an Azure web app named contoso.azurewebsites.net to host www.contoso.com. What should you do first?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Create A records named www.contoso.com and asuid.contoso.com."
+          },
+          {
+            "id": "opt_b",
+            "text": "Create a TXT record named asuid that contains the domain verification ID."
+          },
+          {
+            "id": "opt_c",
+            "text": "Create a CNAME record named asuid that contains the domain verification ID."
+          },
+          {
+            "id": "opt_d",
+            "text": "Create a TXT record named www.contoso.com that has a value of contoso.azurewebsites.net."
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Before mapping a custom domain to an Azure App Service, Azure requires domain ownership verification to prevent subdomain hijacking. This verification is initiated by creating a TXT record named 'asuid' (or asuid.www) containing the verification ID provided in the Azure portal (Option B). Once ownership is validated, actual routing records (like CNAME or A records) can be configured, making the TXT verification record the essential first step."
+      },
+      {
+        "id": "q7",
+        "source": "Source A: AZ-104 exam1.pdf - Question #78 Topic 4",
+        "relatedKeyPointId": "kp-05",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure App Service app named WebApp1 that contains two folders named Folder1 and Folder2. You need to configure a daily backup of WebApp1. The solution must ensure that Folder2 is excluded from the backup. What should you use to exclude Folder2?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "A backup policy"
+          },
+          {
+            "id": "opt_b",
+            "text": "A _backup.filter file"
+          },
+          {
+            "id": "opt_c",
+            "text": "A resource lock"
+          },
+          {
+            "id": "opt_d",
+            "text": "An Azure Storage Lifecycle Policy"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "To exclude specific files or directories from App Service backups, you must create a custom text file named '_backup.filter' (Option B) and place it in the 'D:\\home\\site\\wwwroot' directory of your web app. This file defines exclusion rules for directories like Folder2. Standard backup policies (Option A), resource locks (Option C), and storage lifecycle policies (Option D) do not provide this application-level folder filtering."
+      }
+    ]
+  }
+}

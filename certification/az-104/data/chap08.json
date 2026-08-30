@@ -1,0 +1,331 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 8,
+    "title": "Automation, Deployment, and Configuration of Resources",
+    "sourceBook": "Chap 08 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Azure Resource Manager (ARM) Core Architecture",
+        "summary": "ARM serves as the unified deployment, management, and security management layer in Azure, replacing the Classic model (ASM). It routes all user API requests to specific Resource Providers (such as Microsoft.Compute, Microsoft.Network, Microsoft.Storage) to provision and manage resources. ARM provides features like Resource Groups, Resource Locks, tagging, and role-based access control (RBAC)."
+      },
+      {
+        "id": "kp-02",
+        "title": "ARM Template Schema and Structure",
+        "summary": "ARM templates are declarative JSON files consisting of six primary sections: Schema ($schema), Content Version (contentVersion), Parameters, Functions, Variables, Resources, and Outputs. The Schema URL varies by deployment scope (Resource Group, Subscription, Management Group, or Tenant) and text editor capability. Variables define hard-coded, reusable values, and Parameters define user inputs configurable at runtime with properties like defaultValue, allowedValues, min/maxLength, and min/maxValue."
+      },
+      {
+        "id": "kp-03",
+        "title": "ARM Template Deployment Modes",
+        "summary": "ARM templates can be deployed in two modes: Incremental and Complete. Incremental is the default mode, leaving existing resources in the target Resource Group untouched if they are not defined in the template. Complete mode deletes any existing resource in the Resource Group that is not explicitly declared in the deployed template."
+      },
+      {
+        "id": "kp-04",
+        "title": "Exporting and Reviewing Deployed Templates",
+        "summary": "Azure allows administrators to review and export ARM templates representing deployed resources. In the Azure Portal, this is achieved by navigating to the Resource Group blade and viewing the Deployments history. Programmatically, PowerShell's Export-AzResourceGroup and CLI's az group export can download templates for entire resource groups or individual resource IDs."
+      },
+      {
+        "id": "kp-05",
+        "title": "Virtual Machine Post-Deployment Extensions",
+        "summary": "Azure VM Extensions are small post-deployment applications that automate configuration management, security, and protection tasks on VMs. Key extensions include the Custom Script Extension (for executing custom bash or powershell scripts) and the Desired State Configuration (DSC) Extension (for pulling DSC configuration files from Blob storage to establish and maintain a defined VM state)."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "Azure Resource Manager Architecture",
+        "whyItMatters": "Understanding how ARM coordinates with Resource Providers is fundamental for managing resource lifecycle, scope, and access control. Classic resources (ASM) are deprecated and must be migrated to ARM to ensure support and compliance.",
+        "coreKnowledgePatterns": [
+          "All administration requests (Portal, CLI, PowerShell, SDKs) route through the ARM API layer.",
+          "Resource Groups act as lifecycle boundaries; deleting a resource group recursively deletes all resources inside it.",
+          "RBAC and resource policies are inherited from higher scopes (Management Group > Subscription > Resource Group > Resource)."
+        ],
+        "questionKeywords": [
+          "Resource Provider",
+          "Azure Service Manager",
+          "Classic resources",
+          "delete resource group"
+        ],
+        "examTraps": [
+          "Confusing ASM with ARM; Classic resources lack ARM features like tagging, resource locks, and native RBAC."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Resource Manager (ARM)",
+            "awsEquivalent": "AWS CloudControl API & Service Namespaces",
+            "keyDifferences": "ARM provides a more unified, single-endpoint gateway for all control-plane APIs compared to AWS's legacy service-specific endpoints, though AWS is moving in this direction with CloudControl API."
+          },
+          {
+            "azureConcept": "Resource Group",
+            "awsEquivalent": "AWS Resource Groups / CloudFormation Stacks",
+            "keyDifferences": "In Azure, every resource MUST belong to exactly one Resource Group, which governs its lifecycle and inheritance. In AWS, Resource Groups are optional logical queries, and lifecycle groupings are managed voluntarily via CloudFormation stacks."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-02",
+        "topicName": "ARM Template Structure & Security",
+        "whyItMatters": "JSON template declarative format enables Infrastructure as Code (IaC) consistency. Securing parameters prevents sensitive credentials (like VM passwords) from leaking in plain-text template parameter files.",
+        "coreKnowledgePatterns": [
+          "Parameters ($parameters) allow configurable inputs. To secure strings/passwords, use type 'securestring' and reference them from an Azure Key Vault secret.",
+          "Variables section stores non-configurable hard-coded values or dynamic configurations using expressions (e.g. uniqueString, concat).",
+          "Functions section allows building custom re-usable functions with custom namespaces to prevent naming duplication.",
+          "Outputs section displays deployment properties (like storage endpoints or public DNS FQDNs) to the deployer."
+        ],
+        "questionKeywords": [
+          "parameter",
+          "variable",
+          "outputs",
+          "dependsOn",
+          "Key Vault",
+          "plain text password"
+        ],
+        "examTraps": [
+          "Storing database connection strings or administrative passwords as defaultValues in the template file instead of using securestring parameters integrated with Key Vault."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "ARM Template Sections",
+            "awsEquivalent": "AWS CloudFormation Template Sections",
+            "keyDifferences": "ARM's Parameters maps to CloudFormation's Parameters. ARM's Variables maps to CloudFormation's Mappings/Variables. ARM's Resources maps to CloudFormation's Resources. ARM's Outputs maps to CloudFormation's Outputs."
+          },
+          {
+            "azureConcept": "Password parameter secure reference (Key Vault)",
+            "awsEquivalent": "Dynamic References (AWS Secrets Manager / SSM Parameter Store)",
+            "keyDifferences": "Azure retrieves Key Vault secrets during template deployment using specific parameter files containing vault ID references. AWS CloudFormation uses native dynamic patterns like '{{resolve:secretsmanager:secret-id}}' directly inside the template."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Incremental vs. Complete Deployment Modes",
+        "whyItMatters": "Setting the wrong deployment mode can cause massive accidental data loss by deleting critical existing resources. Choosing the correct mode is vital for greenfield vs. brownfield automation.",
+        "coreKnowledgePatterns": [
+          "Incremental (Default): Adds declared resources. Unmodified existing resources remain intact.",
+          "Complete: Forces target resource group to match the template exactly. Existing resources NOT in the template are deleted.",
+          "PowerShell syntax uses '-Mode Complete' or '-Mode Incremental' in New-AzResourceGroupDeployment.",
+          "CLI syntax uses '--mode Complete' or '--mode Incremental' in az group deployment create."
+        ],
+        "questionKeywords": [
+          "remove all existing resources",
+          "Incremental",
+          "Complete",
+          "mode"
+        ],
+        "examTraps": [
+          "Deploying in Complete mode without performing a 'what-if' check, causing unintended deletions of baseline resources inside a shared resource group."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Complete Deployment Mode",
+            "awsEquivalent": "CloudFormation Stack Updates (Direct modification)",
+            "keyDifferences": "CloudFormation always maintains resource states bounded strictly to the Stack. An update will delete resources removed from the template, but it NEVER deletes unrelated resources in the same resource group or account. Azure's Complete Mode operates on the entire Resource Group scope, deleting ANY resource in that group not declared in the deployed template."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Exporting Templates & Deployments",
+        "whyItMatters": "Enables troubleshooting failures, recreating resources, and implementing template version control by capturing current environmental states or histories.",
+        "coreKnowledgePatterns": [
+          "Template history is found in the Resource Group's 'Deployments' blade.",
+          "Selecting a deployment and clicking 'View template' is the fastest way to extract template definitions.",
+          "PowerShell uses 'Export-AzResourceGroup' to download current RG state to a local path."
+        ],
+        "questionKeywords": [
+          "review ARM template used",
+          "Jon Ross",
+          "Resource Group blade",
+          "Deployments history",
+          "Export-AzResourceGroup"
+        ],
+        "examTraps": [
+          "Trying to retrieve deployment history or export templates from the 'Virtual Machine' blade or 'Container' blade directly instead of the parent Resource Group blade."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Deployments history & View Template",
+            "awsEquivalent": "CloudFormation Stack Events & Template tab",
+            "keyDifferences": "Highly analogous. AWS CloudFormation tracks deployment logs in the 'Events' tab and the current template in the 'Template' tab. In Azure, these are accessed under the Resource Group's 'Deployments' history page."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "Virtual Machine Extensions (CSE and DSC)",
+        "whyItMatters": "Allows zero-touch automation of software installations, security configurations, and application deployments immediately upon VM provisioning.",
+        "coreKnowledgePatterns": [
+          "Extensions are declared as resources nested under VM or as standalone resources of type 'Microsoft.Compute/virtualMachines/extensions'.",
+          "Custom Script Extension (CSE): Great for simple, quick post-deployment script execution.",
+          "Desired State Configuration (DSC): Best for continuous drift management and complex server configurations (e.g. setting up NGINX on Windows Server 2019 Scale Sets)."
+        ],
+        "questionKeywords": [
+          "NGINX",
+          "virtual machine scale set",
+          "Desired State Configuration (DSC) extension",
+          "Custom Script Extension"
+        ],
+        "examTraps": [
+          "Assuming programmatic deployment cmdlets (e.g., Publish-AzVMDscConfiguration) should be referenced inside an ARM template instead of declaring the DSC extension block itself."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Custom Script Extension",
+            "awsEquivalent": "EC2 User Data (Launch Script)",
+            "keyDifferences": "EC2 User Data runs once during the first boot of the instance. Azure Custom Script Extensions are engine-managed and can be redeployed, updated, and verified at any point of the VM lifecycle."
+          },
+          {
+            "azureConcept": "DSC Extension",
+            "awsEquivalent": "AWS Systems Manager (SSM) State Manager / AWS OpsWorks",
+            "keyDifferences": "Azure DSC extensions integrate natively with PowerShell Desired State Configuration engines to enforce target node compliance. AWS Systems Manager uses SSM Documents and State Manager association intervals to achieve continuous compliance."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 5,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source A: AZ-104 exam1.pdf - Question #14 Topic 1",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "Your company has an azure subscription that includes a storage account, a resource group, a blob container and a file share. A colleague named Jon Ross makes use of a solitary Azure Resource Manager (ARM) template to deploy a virtual machine and an additional Azure Storage account. You want to review the ARM template that was used by Jon Ross. Solution: You access the Resource Group blade. Does the solution meet the goal?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Yes"
+          },
+          {
+            "id": "opt_b",
+            "text": "No"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "To view the ARM template used for a past deployment, you must navigate to the Resource Group blade where the deployment occurred, click on the 'Deployments' link, select the specific successful deployment from the history list, and then click 'View template'. Accessing other resource-specific blades such as the Virtual Machine or Blob Container blades will not provide access to the overall template deployment history."
+      },
+      {
+        "id": "q2",
+        "source": "Source A: AZ-104 exam1.pdf - Question #6 Topic 4",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You download an Azure Resource Manager template based on an existing virtual machine. The template will be used to deploy 100 virtual machines. You need to modify the template to reference an administrative password. You must prevent the password from being stored in plain text. What should you create to store the password?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "an Azure Key Vault and an access policy"
+          },
+          {
+            "id": "opt_b",
+            "text": "an Azure Storage account and an access policy"
+          },
+          {
+            "id": "opt_c",
+            "text": "a Recovery Services vault and a backup policy"
+          },
+          {
+            "id": "opt_d",
+            "text": "Azure Active Directory (AD) Identity Protection and an Azure policy"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "To protect secrets like administrative passwords from being hardcoded or stored in plain text inside template parameters, you should create an Azure Key Vault and configure an access policy that grants the Microsoft.Resources template deployment engine permissions to retrieve secrets. This allows the password parameter to securely fetch the secret dynamically at runtime."
+      },
+      {
+        "id": "q3",
+        "source": "Source A: AZ-104 exam1.pdf - Question #77 Topic 4",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You develop the following Azure Resource Manager (ARM) template to create a resource group and deploy an Azure Storage account to the resource group.\n\nWhich cmdlet should you run to deploy the template?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "New-AzResource"
+          },
+          {
+            "id": "opt_b",
+            "text": "New-AzResourceGroupDeployment"
+          },
+          {
+            "id": "opt_c",
+            "text": "New-AzTenantDeployment"
+          },
+          {
+            "id": "opt_d",
+            "text": "New-AzDeployment"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Because the template is targeted at creating resources inside a resource group scope, you must use New-AzResourceGroupDeployment. New-AzDeployment is an alias for New-AzSubscriptionDeployment used to deploy resources to subscription scopes, New-AzTenantDeployment is for tenant scope deployments, and New-AzResource creates individual resource instances programmatically rather than initiating template deployments."
+      },
+      {
+        "id": "q4",
+        "source": "Source A: AZ-104 exam1.pdf - Question #86 Topic 4",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains a resource group named RG1. You plan to use an Azure Resource Manager (ARM) template named template1 to deploy resources. The solution must meet the following requirements:\n- Deploy new resources to RG1.\n- Remove all the existing resources from RG1 before deploying the new resources.\nHow should you complete the command?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Run New-AzResourceGroupDeployment with -Mode Incremental"
+          },
+          {
+            "id": "opt_b",
+            "text": "Run New-AzResourceGroupDeployment with -Mode Complete"
+          },
+          {
+            "id": "opt_c",
+            "text": "Run New-AzResourceGroupDeployment with -Mode All"
+          },
+          {
+            "id": "opt_d",
+            "text": "Run New-AzResource with -Mode Complete"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "To delete all existing resources in the target resource group (RG1) that are not specified in the template, you must use New-AzResourceGroupDeployment with the deployment mode set to Complete (-Mode Complete). Incremental mode is the default and would leave existing resources unmodified, while 'All' is not a valid deployment mode parameter."
+      },
+      {
+        "id": "q5",
+        "source": "Source A: AZ-104 exam1.pdf - Question #143 Topic 5",
+        "relatedKeyPointId": "kp-05",
+        "questionType": "single-choice",
+        "questionText": "You plan to deploy several Azure virtual machines that will run Windows Server 2019 in a virtual machine scale set by using an Azure Resource Manager template. You need to ensure that NGINX is available on all the virtual machines after they are deployed. What should you use?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "a Desired State Configuration (DSC) extension"
+          },
+          {
+            "id": "opt_b",
+            "text": "a Microsoft Intune device configuration profile"
+          },
+          {
+            "id": "opt_c",
+            "text": "the Publish-AzVMDscConfiguration cmdlet"
+          },
+          {
+            "id": "opt_d",
+            "text": "the New-AzConfigurationAssignment cmdlet"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "To automate the post-deployment configuration and ensure NGINX is installed across all scale set VM instances, you should include a Desired State Configuration (DSC) extension inside the virtual machine scale set properties of your ARM template. Other options like Intune device configuration profiles, Publish-AzVMDscConfiguration (a local deployment orchestration PowerShell command), or New-AzConfigurationAssignment do not serve as template-native VM post-deployment extensions."
+      }
+    ]
+  }
+}

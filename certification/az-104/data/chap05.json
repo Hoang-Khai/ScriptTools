@@ -1,0 +1,300 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 5,
+    "title": "Network Traffic Management",
+    "sourceBook": "Chap 05 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-01",
+        "title": "Azure Availability Sets",
+        "summary": "Logical grouping of VMs that protects against physical hardware failures (via Fault Domains) and planned maintenance reboots (via Update Domains) within a single datacenter, providing a 99.95% connectivity SLA."
+      },
+      {
+        "id": "kp-02",
+        "title": "Azure Availability Zones",
+        "summary": "Physically isolated locations within an Azure region with independent power, cooling, and networking that protect against complete datacenter-level failures, providing a 99.99% connectivity SLA."
+      },
+      {
+        "id": "kp-03",
+        "title": "Azure Load Balancer (Layer 4)",
+        "summary": "A high-performance Layer 4 (Transport layer) network load balancer routing TCP/UDP traffic based on hashes (5-tuple, 3-tuple, or 2-tuple). Available in Basic and Standard SKUs with strict SKU matching requirements for public IPs."
+      },
+      {
+        "id": "kp-04",
+        "title": "Azure Application Gateway (Layer 7)",
+        "summary": "A regional Layer 7 (Application layer) web traffic load balancer supporting HTTP, HTTPS, WebSockets, and HTTP/2. Features path-based routing, multisite hosting, SSL termination, and integrated OWASP Web Application Firewall (WAF) protection."
+      },
+      {
+        "id": "kp-05",
+        "title": "Azure Front Door & Traffic Manager",
+        "summary": "Global traffic routing solutions. Azure Front Door offers Layer 7 multi-region routing with anycast split-TCP. Traffic Manager acts as a pure DNS-based resolver where network traffic does not transit through the gateway itself."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-01",
+        "topicName": "Fault Domains vs. Update Domains",
+        "whyItMatters": "Crucial for planning infrastructure resilience and understanding how Azure handles underlying hardware maintenance and failure events without causing service outages.",
+        "coreKnowledgePatterns": [
+          "Fault Domains (FDs): Share a common power source, physical network switch, and air conditioning. Protect against unplanned hardware/rack failures. Configurable up to 3 FDs (default).",
+          "Update Domains (UDs): Logical groups of physical hosts that can be rebooted/updated at the same time. Configurable up to 20 UDs (default is 5). Only one UD reboots at a time during planned maintenance, with 30 minutes allocated to recover.",
+          "Availability Sets are free of charge; you only pay for the deployed VM instances."
+        ],
+        "questionKeywords": [
+          "platformUpdateDomainCount",
+          "platformFaultDomainCount",
+          "planned maintenance",
+          "rebooted at the same time",
+          "fabric failure"
+        ],
+        "examTraps": [
+          "Confusing FD and UD purposes: FDs are for unplanned fabric/power failures; UDs are strictly for planned updates and reboots.",
+          "Availability Sets only protect at the rack/datacenter level; they do not protect against an entire datacenter or region outage."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Availability Set (Fault Domains)",
+            "awsEquivalent": "Spread Placement Groups / Partition Placement Groups",
+            "keyDifferences": "AWS Spread Placement groups place instances on distinct hardware racks with separate network and power, similar to Fault Domains. In AWS, this is configured via placement policies, whereas Azure encapsulates this directly inside an Availability Set resource."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-02",
+        "topicName": "Availability Zones & SLAs",
+        "whyItMatters": "Architecting for maximum cloud resiliency depends on choosing between zonal and zone-redundant layouts to achieve the 99.99% VM availability SLA.",
+        "coreKnowledgePatterns": [
+          "Availability Zones are unique physical locations connected via low-latency fiber. Each zone has independent power, cooling, and network infrastructure.",
+          "Single-instance VM SLA: 95% connectivity using Standard HDD disks.",
+          "Availability Set SLA: At least 99.95% connectivity for 2 or more instances in the same set.",
+          "Availability Zones SLA: At least 99.99% connectivity for 2 or more instances deployed across separate zones in the same region."
+        ],
+        "questionKeywords": [
+          "datacenter becomes unavailable",
+          "separate Availability Zone",
+          "zonal",
+          "zone-redundant",
+          "99.99 percent SLA"
+        ],
+        "examTraps": [
+          "Assuming Availability Zones are supported in every Azure region. They are only supported in regions with multiple physically isolated datacenters.",
+          "Believing Zone-Redundant Storage (ZRS) or Availability Zones are free; they involve data egress/transfer costs across zones."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Availability Zones (AZ)",
+            "awsEquivalent": "Availability Zones (AZ)",
+            "keyDifferences": "Directly equivalent. Both represent physically isolated datacenters within a region with independent power and cooling."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-03",
+        "topicName": "Azure Load Balancer SKU Capabilities & Session Persistence",
+        "whyItMatters": "The Standard SKU offers modern enterprise features like Availability Zones, high instance counts, and HA ports that are absent in the legacy Basic SKU.",
+        "coreKnowledgePatterns": [
+          "Basic SKU limits: Supports up to 100 backend instances, VMs must reside in a single availability set or VMSS, supports HTTP/TCP probes.",
+          "Standard SKU limits: Supports up to 1,000 backend instances, any VMs/VMSS in a virtual network, HTTPS probes, HA ports, diagnostic metrics, and Availability Zones.",
+          "Matching SKU Rule: Public IP address SKUs must match the Load Balancer SKU. A Standard Load Balancer requires a Standard public IP; it cannot mix with a Basic public IP.",
+          "Session Persistence Modes: 'None' uses a 5-tuple hash (source IP/port, destination IP/port, protocol). 'Client IP' uses a 2-tuple hash (source/destination IP) to bind a client's sessions to the same backend server. 'Client IP and protocol' uses a 3-tuple hash."
+        ],
+        "questionKeywords": [
+          "same web server for each request",
+          "Session persistence",
+          "Client IP",
+          "Standard Load Balancer backend pool",
+          "Standard public IP",
+          "Matching SKUs"
+        ],
+        "examTraps": [
+          "Trying to associate a Basic SKU public IP to a Standard SKU Load Balancer. This will fail validation.",
+          "Configuring 'Floating IP' (Direct Server Return) thinking it manages session stickiness. Floating IP changes the IP mapping scheme for backend port reuse (common for SQL Server Always On listeners) but does not handle sticky sessions.",
+          "Basic SKU load balancers do not support HTTPS health probes; they only support HTTP and TCP."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Load Balancer (Layer 4)",
+            "awsEquivalent": "Network Load Balancer (NLB)",
+            "keyDifferences": "Both route L4 TCP/UDP traffic. Standard Load Balancer HA Ports are similar to NLB routing all ports to a target. Basic SKU behaves more like the legacy L4 Classic Load Balancer (CLB)."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-04",
+        "topicName": "Azure Application Gateway Layer 7 Routing & WAF",
+        "whyItMatters": "Application Gateway manages web traffic intelligently by inspecting the HTTP header, enabling host/path-based routing, and defending against web-tier vulnerabilities.",
+        "coreKnowledgePatterns": [
+          "Operates at Layer 7 (Application layer). Routes traffic based on hostnames and URL paths (e.g., routing /images/* to a separate backend pool).",
+          "Web Application Firewall (WAF) tier utilizes OWASP rules to block SQL injection, cross-site scripting (XSS), and session hijacking threats.",
+          "Front-end IP Configuration: Can support a maximum of one public IP and one private IP.",
+          "Health Probe validation: Any HTTP response status code between 200 and 399 is considered healthy. Standard probe interval defaults to 30 seconds."
+        ],
+        "questionKeywords": [
+          "SQL injection attacks",
+          "web front end",
+          "Application Gateway WAF",
+          "path-based routing",
+          "multisite routing",
+          "URL paths"
+        ],
+        "examTraps": [
+          "Using an Azure Load Balancer (L4) to block SQL injection or parse HTTP paths. It cannot inspect the application payload; only Application Gateway (WAF tier) or Front Door can do this.",
+          "Placing other services in the Application Gateway subnet. Application Gateway requires a dedicated subnet of at least /26 size."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Application Gateway",
+            "awsEquivalent": "Application Load Balancer (ALB) + AWS WAF",
+            "keyDifferences": "Both operate at L7, support URL path/host routing, and SSL termination. ALB integrates with AWS WAF separately, whereas Azure packages the Web Application Firewall (WAF) directly as a selectable SKU tier within the Application Gateway resource."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-05",
+        "topicName": "Azure Front Door vs. Traffic Manager",
+        "whyItMatters": "Understanding the architectural choice between global DNS-level routing and global HTTP-anycast routing for multi-region disaster recovery and failover.",
+        "coreKnowledgePatterns": [
+          "Azure Front Door: Global Layer 7 HTTP/HTTPS load balancer. Uses anycast protocol with split-TCP on the Microsoft global network to terminate TLS close to users and route traffic across multiple regions.",
+          "Azure Traffic Manager: L3/L4 DNS-based load balancer. Resolves DNS requests to direct clients to the healthiest regional endpoint. Network traffic bypasses Traffic Manager entirely after resolution, reducing overhead but losing L7 capabilities."
+        ],
+        "questionKeywords": [
+          "global failover",
+          "DNS resolver",
+          "Traffic Manager",
+          "routing methods",
+          "anycast protocol",
+          "DNS response"
+        ],
+        "examTraps": [
+          "Assuming Traffic Manager proxies application traffic. It only acts as a DNS resolver; if a backend server fails, clients may hit cached DNS records until TTL expires.",
+          "Using Traffic Manager for SSL termination or URL path routing. Since Traffic Manager only resolves DNS, it cannot inspect headers or manage TLS certificates."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Traffic Manager",
+            "awsEquivalent": "Amazon Route 53 Routing Policies",
+            "keyDifferences": "Both operate strictly at the DNS level. Route 53 is a fully featured DNS hosting service that includes routing policies (latency, weighted, geolocation), whereas Traffic Manager is purely a DNS routing overlay that delegates to separate DNS providers."
+          },
+          {
+            "azureConcept": "Azure Front Door",
+            "awsEquivalent": "Amazon CloudFront + AWS Global Accelerator",
+            "keyDifferences": "Front Door combines global HTTP/HTTPS routing, CDN caching, and Anycast routing into a unified Layer 7 service, whereas AWS typically splits these across CloudFront (CDN) and Global Accelerator (Anycast IP routing)."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source A: AZ-104 exam1.pdf - Question #19Topic 1",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "Your company has an Azure subscription. You need to deploy a number of Azure virtual machines (VMs) using Azure Resource Manager (ARM) templates. You have been informed that the VMs will be included in a single availability set. You are required to make sure that the ARM template you configure allows for as many VMs as possible to remain accessible in the event of fabric failure or maintenance. Which of the following is the value that you should configure for the platformUpdateDomainCount property?",
+        "options": [
+          { "id": "opt_a", "text": "10" },
+          { "id": "opt_b", "text": "20" },
+          { "id": "opt_c", "text": "30" },
+          { "id": "opt_d", "text": "40" }
+        ],
+        "correctAnswers": ["opt_b"],
+        "explanation": "Azure Resource Manager allows you to configure up to 20 update domains (platformUpdateDomainCount) for an availability set. This ensures that physical hardware upgrades or patching reboot at most 1/20th of the virtual machines at any given time, maximizing availability compared to lower values."
+      },
+      {
+        "id": "q2",
+        "source": "Source A: AZ-104 exam1.pdf - Question #27Topic 3",
+        "relatedKeyPointId": "kp-01",
+        "questionType": "single-choice",
+        "questionText": "You have an app named App1 that runs on two Azure virtual machines named VM1 and VM2. You plan to implement an Azure Availability Set for App1. The solution must ensure that App1 is available during planned maintenance of the hardware hosting VM1 and VM2. What should you include in the Availability Set?",
+        "options": [
+          { "id": "opt_a", "text": "one update domain" },
+          { "id": "opt_b", "text": "two fault domains" },
+          { "id": "opt_c", "text": "one fault domain" },
+          { "id": "opt_d", "text": "two update domains" }
+        ],
+        "correctAnswers": ["opt_d"],
+        "explanation": "Update domains are logical groupings of underlying physical hardware that can undergo planned maintenance or reboots at the same time. Since the application runs on two VMs, placing them in two separate update domains ensures only one VM is rebooted at a time. Fault domains protect against unplanned physical hardware/power outages, not planned maintenance."
+      },
+      {
+        "id": "q3",
+        "source": "Source A: AZ-104 exam1.pdf - Question #49Topic 4",
+        "relatedKeyPointId": "kp-02",
+        "questionType": "single-choice",
+        "questionText": "You plan to deploy three Azure virtual machines named VM1, VM2, and VM3. The virtual machines will host a web app named App1. You need to ensure that at least two virtual machines are available if a single Azure datacenter becomes unavailable. What should you deploy?",
+        "options": [
+          { "id": "opt_a", "text": "all three virtual machines in a single Availability Zone" },
+          { "id": "opt_b", "text": "all virtual machines in a single Availability Set" },
+          { "id": "opt_c", "text": "each virtual machine in a separate Availability Zone" },
+          { "id": "opt_d", "text": "each virtual machine in a separate Availability Set" }
+        ],
+        "correctAnswers": ["opt_c"],
+        "explanation": "Availability Zones protect resources from datacenter-level failures because each zone represents a physically isolated datacenter with independent power, cooling, and networking within a region. Deploying the three VMs into three separate Availability Zones ensures that if any single zone fails, the other two zones (and their respective VMs) remain completely unaffected, keeping at least two instances available. Availability Sets only protect against rack-level failures within a single datacenter."
+      },
+      {
+        "id": "q4",
+        "source": "Source A: AZ-104 exam1.pdf - Question #24Topic 5",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You have a public load balancer that balances ports 80 and 443 across three virtual machines named VM1, VM2, and VM3. You need to direct all the Remote Desktop Protocol (RDP) connections to VM3 only. What should you configure?",
+        "options": [
+          { "id": "opt_a", "text": "an inbound NAT rule" },
+          { "id": "opt_b", "text": "a new public load balancer for VM3" },
+          { "id": "opt_c", "text": "a frontend IP configuration" },
+          { "id": "opt_d", "text": "a load balancing rule" }
+        ],
+        "correctAnswers": ["opt_a"],
+        "explanation": "An inbound NAT rule allows you to direct traffic from a specific port on the public load balancer's frontend IP directly to a specific port on a single virtual machine instance (RDP to VM3). Load balancing rules distribute traffic dynamically across all backend targets in a pool, and creating an additional load balancer is unnecessary and increases costs."
+      },
+      {
+        "id": "q5",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 3",
+        "relatedKeyPointId": "kp-04",
+        "questionType": "single-choice",
+        "questionText": "You plan to deploy a multi-tiered application that contains a Front-end web server tier (10 VMs, public-facing), a Business logic tier (100 VMs, private), and a Microsoft SQL Server database tier (5 VMs, private). You need to recommend a networking solution to meet the following requirements:\n- Ensure that communication between the web servers and the business logic tier spreads equally across the virtual machines.\n- Protect the web servers from SQL injection attacks.\nWhich Azure resource should you recommend for each requirement?",
+        "options": [
+          { "id": "opt_a", "text": "Web Application Firewall (WAF) Application Gateway for both requirements" },
+          { "id": "opt_b", "text": "Public load balancer for business logic tier, and WAF Application Gateway for web servers" },
+          { "id": "opt_c", "text": "Internal load balancer for business logic tier, and WAF Application Gateway for web servers" },
+          { "id": "opt_d", "text": "Network Security Group (NSG) for business logic tier, and public load balancer for web servers" }
+        ],
+        "correctAnswers": ["opt_c"],
+        "explanation": "An internal load balancer is ideal for routing and load-balancing traffic between tiers inside a virtual network (from public web servers to private backend business tier VMs). To protect the public web servers from application-level attacks like SQL injection, a Layer 7 Application Gateway using the Web Application Firewall (WAF) tier is required, as traditional Layer 4 load balancers only inspect network packets and cannot block application layer exploits."
+      },
+      {
+        "id": "q6",
+        "source": "Source A: AZ-104 exam1.pdf - Question #86Topic 5",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that uses public IP addresses IP1 (Basic SKU, Static), IP2 (Basic SKU, Dynamic), and IP3 (Standard SKU, Static, Zone-redundant). You need to create a public Azure Standard Load Balancer. Which public IP addresses can you use?",
+        "options": [
+          { "id": "opt_a", "text": "IP1, IP2, and IP3" },
+          { "id": "opt_b", "text": "IP2 only" },
+          { "id": "opt_c", "text": "IP3 only" },
+          { "id": "opt_d", "text": "IP1 and IP3 only" }
+        ],
+        "correctAnswers": ["opt_c"],
+        "explanation": "Matching SKUs are strictly required for Azure public IP addresses and Load Balancer resources. You cannot mix Basic SKU public IPs (IP1 and IP2) with a Standard SKU Load Balancer. Only standard SKU public IP resources (IP3) can be attached to a Standard Load Balancer."
+      },
+      {
+        "id": "q7",
+        "source": "Source B: AZ-104 exam2.pdf - QUESTION: 124",
+        "relatedKeyPointId": "kp-03",
+        "questionType": "single-choice",
+        "questionText": "You have five Azure virtual machines that run Windows Server 2016. The virtual machines are configured as web servers. You have an Azure load balancer named LB1 that provides load balancing services for the virtual machines. You need to ensure that visitors are serviced by the same web server for each request. What should you configure?",
+        "options": [
+          { "id": "opt_a", "text": "Floating IP (direct server return) to Enabled" },
+          { "id": "opt_b", "text": "Idle Time-out (minutes) to 20" },
+          { "id": "opt_c", "text": "a health probe" },
+          { "id": "opt_d", "text": "Session persistence to Client IP" }
+        ],
+        "correctAnswers": ["opt_d"],
+        "explanation": "Session persistence to Client IP (source IP affinity) ensures that successive requests coming from the same client IP address are mapped to the same backend virtual machine in the pool. Health probes only determine target viability, while Floating IP enables backend ports to be reused in scenarios like SQL Server clusters but does not control session affinity."
+      }
+    ]
+  }
+}

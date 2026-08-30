@@ -1,0 +1,436 @@
+{
+  "chapterMetaData": {
+    "chapterNumber": 10,
+    "title": "Data Protection (Backup & Recovery)",
+    "sourceBook": "Chap 10 - MCA Microsoft Certified Associate Azure Administrator Study Guide Exam AZ-104 - Donald Robb.pdf",
+    "version": "1.0.0"
+  },
+  "studySection": {
+    "knowledgeKeyPoints": [
+      {
+        "id": "kp-10-01",
+        "title": "Azure Recovery Services Vault Architecture",
+        "summary": "Recovery Services vaults act as centralized logical containers for managing, tracking, auditing, and storing backup data across various Azure resources [257]. They are regional resources; a vault can only back up resources situated in its same region [258]. Up to 25 vaults can be deployed per region per subscription [261]."
+      },
+      {
+        "id": "kp-10-02",
+        "title": "Azure VM Native Backup and Recovery",
+        "summary": "Azure IaaS VM Backup uses a VM extension to orchestrate VSS-consistent (Windows) or file-system-consistent (Linux) snapshots without guest agents [271]. These local snapshots act as instant recovery points before being incrementally transferred as block-level changes to the Recovery Services vault [271, 272]."
+      },
+      {
+        "id": "kp-10-03",
+        "title": "Guest-Level File and Folder Backup with MARS Agent",
+        "summary": "The Microsoft Azure Recovery Services (MARS) agent is a lightweight on-premises utility installed directly on Windows workloads to back up files and folders straight to an Azure Recovery Services vault [262, 264]. It requires no local backup servers, supports up to three backups per day, and executes volume-level restores [265, 291]."
+      },
+      {
+        "id": "kp-10-04",
+        "title": "Enterprise Application Backup with MABS and DPM",
+        "summary": "Microsoft Azure Backup Server (MABS) and System Center Data Protection Manager (DPM) provide enterprise-grade, application-aware backup solutions for specialized workloads (Exchange, SQL Server, SharePoint), VMware/Linux VMs, and bare-metal states [284, 285, 291]."
+      },
+      {
+        "id": "kp-10-05",
+        "title": "Azure Site Recovery (ASR) for BCDR",
+        "summary": "Azure Site Recovery (ASR) is a disaster recovery and business continuity solution that replicates running VMs (Azure, VMware, Hyper-V, physical servers, or AWS Windows) from a primary site to a secondary target region [290, 292]. In the event of a regional outage, VM workloads are manually failed over and spun up in the secondary region [290]."
+      },
+      {
+        "id": "kp-10-06",
+        "title": "Backup Security: Multi-User Authorization & Resource Guards",
+        "summary": "Multi-User Authorization (MUA) protects critical vault operations (e.g., deleting backup data, changing backup policies) by using a separate resource called a 'Resource Guard' [38, 206]. This enforces separation of duties, ensuring that even if a vault administrator's credentials are compromised, they cannot destroy backups without approval from the Resource Guard administrator."
+      }
+    ],
+    "highYieldNotes": [
+      {
+        "keyPointId": "kp-10-01",
+        "topicName": "Vault Design and Redundancy Configurations",
+        "whyItMatters": "Vault region and storage replication constraints are critical design choices. If a vault is created in East US, it can never back up VMs in North Europe, requiring multiple vaults for multi-region architectures.",
+        "coreKnowledgePatterns": [
+          "Regional lock: Vault region and resource region must match. VMs in separate regions require distinct regional vaults [258].",
+          "Default GRS: New vaults default to Geo-Redundant Storage (GRS). This must be manually updated to LRS or ZRS before configuring any backups [259, 275].",
+          "Vault limits: Up to 25 vaults can be deployed per region per subscription [261].",
+          "Vault dependencies: To delete a vault, stop backup jobs, delete all backup data, and unregister servers first [7]."
+        ],
+        "questionKeywords": [
+          "Recovery Services vault",
+          "delete vault",
+          "same region",
+          "GRS",
+          "LRS",
+          "ZRS",
+          "Vault1",
+          "Vault2"
+        ],
+        "examTraps": [
+          "Believing that storage accounts or virtual networks can be backed up directly across region boundaries to any vault.",
+          "Attempting to modify a vault's storage replication type (GRS to LRS/ZRS) after a backup has been configured.",
+          "Trying to delete a vault directly without stopping backups and purging backup data first."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Recovery Services vault",
+            "awsEquivalent": "AWS Backup Vault & AWS Elastic Disaster Recovery (AWS DRS)",
+            "keyDifferences": "In Azure, a single Recovery Services vault handles both file/folder backups (Azure Backup) and virtual machine disaster recovery replication (Azure Site Recovery) under a single management pane [252]. AWS separates these concerns: AWS Backup uses a Backup Vault, whereas AWS DRS replicates block-level volumes to a regional staging area using lightweight replication agents. Azure vaults default to cross-region redundancy (GRS), while AWS Backup requires cross-region copying rules to be explicitly added to a backup plan."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-10-02",
+        "topicName": "Azure VM Native Backup & Replace Disk Restore",
+        "whyItMatters": "Crucial for backing up VMs with high performance, minimal overhead, and predictable costs. Replacing an existing VM restores it to the state at the time of the backup, meaning guest-level changes made after the backup point will be overwritten.",
+        "coreKnowledgePatterns": [
+          "No Guest Agent: Gallery-based Azure VMs do not require a guest agent; they use built-in extensions [271, 276].",
+          "Local Snapshots: Initial snapshots are stored locally (VSS/crash-consistent) for fast instant restore before being incrementally transferred over HTTPS to the vault [271, 272].",
+          "OS Disk Only: Backups can be optimized to exclude attached data disks and protect only the OS disk [279].",
+          "Replace Disk Overwrite: Guest OS file-level changes made after a backup point are lost during a replace disk restore and must be performed again [43]."
+        ],
+        "questionKeywords": [
+          "VSS snapshot",
+          "Replace existing",
+          "Create new",
+          "incremental blocks",
+          "Budget.xls",
+          "restore VM"
+        ],
+        "examTraps": [
+          "Assuming file changes made after a backup is taken will survive a 'Replace existing' restore. They are completely overwritten.",
+          "Forgetting that when restoring via 'Replace existing', any data disks modified since the backup can have their file content reverted if not explicitly excluded from backup."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure IaaS VM Backup",
+            "awsEquivalent": "AWS Backup for EC2",
+            "keyDifferences": "Both services offer managed, volume-level, crash-consistent backups with VSS support for Windows workloads. AWS uses AMI snapshotting behind the scenes, while Azure Backup orchestrates guest-level extensions and maintains a recovery point limit of 9,999 per instance compared to AWS's reliance on native snapshot limits."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-10-03",
+        "topicName": "Guest-Level File and Folder Backup with MARS Agent",
+        "whyItMatters": "Offers granular file/folder backups for hybrid, on-premises, and multi-cloud Windows environments without the cost or overhead of hosting dedicated backup servers.",
+        "coreKnowledgePatterns": [
+          "OS Limits: Supports Windows client and server OS; Linux is not supported [264, 291].",
+          "Direct Vaulting: MARS backs up directly to the Recovery Services vault without an intermediate storage account or staging server [262, 291].",
+          "Volume Limits: Volume-level restore operations only; the agent is not aware of applications [265, 291]."
+        ],
+        "questionKeywords": [
+          "MARS agent",
+          "file recovery",
+          "Windows Server 2016",
+          "on-premises"
+        ],
+        "examTraps": [
+          "Choosing MARS for Linux backups (which are unsupported).",
+          "Believing MARS can do application-aware SQL Server, Exchange, or Active Directory restores on its own (it is only file/folder-level)."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "MARS Agent",
+            "awsEquivalent": "AWS Backup Gateway & AWS Storage Gateway",
+            "keyDifferences": "AWS Backup utilizes the AWS Backup Gateway deployed as a virtual appliance on-premises to discover and back up files to AWS Backup. MARS, conversely, is an agent installed directly on individual Windows guests to communicate straight with Azure. Alternatively, AWS Storage Gateway can provide NFS/SMB targets backed by S3."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-10-04",
+        "topicName": "Enterprise Application Backup with MABS and DPM",
+        "whyItMatters": "Necessary for backing up complex multi-tier applications or Linux environments on-premises that MARS cannot protect.",
+        "coreKnowledgePatterns": [
+          "MABS Architecture: MABS uses guest agents on virtual machines to perform local disk backups, then uses an integrated MARS agent to replicate those backups to an Azure vault [287, 288].",
+          "Workloads Supported: Application-aware backups (SharePoint, SQL, Exchange) and bare-metal recovery [285, 291, 292].",
+          "Free License: No System Center license is required to use Microsoft Azure Backup Server (MABS) [292]."
+        ],
+        "questionKeywords": [
+          "MABS",
+          "Data Protection Manager",
+          "application-aware",
+          "VMware",
+          "Linux VMs",
+          "bare-metal"
+        ],
+        "examTraps": [
+          "Assuming MABS requires a System Center license; MABS itself is free to download and install.",
+          "Confusing MABS with MARS; MABS requires a dedicated backup VM/server, while MARS does not."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Microsoft Azure Backup Server (MABS)",
+            "awsEquivalent": "AWS Backup with Application Integration",
+            "keyDifferences": "AWS Backup handles application-consistent backups natively through Systems Manager VSS APIs and built-in database adapters for AWS-native databases (RDS, DynamoDB, Neptune, DocumentDB). Azure uses MABS as a self-managed intermediate backup server (software deployable inside a VM) to handle complex hybrid or on-premises workloads and sync with Recovery Services vaults."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-10-05",
+        "topicName": "Azure Site Recovery (ASR) for BCDR",
+        "whyItMatters": "High availability zones protect against local datacenter failures; ASR is required to survive a complete Azure region outage.",
+        "coreKnowledgePatterns": [
+          "Mobility Service: Replicates disks continuously via a guest extension agent (Mobility Service) to a staging cache storage account before writing to replica disks in the target region [296, 297].",
+          "Manual trigger: Failover and failback processes are not automated; they must be triggered manually [290].",
+          "Recovery points: Crash-consistent recovery points are generated every 5 minutes; app-consistent points are based on replication policy schedules [297]."
+        ],
+        "questionKeywords": [
+          "continuous replication",
+          "failover",
+          "failback",
+          "Mobility Service",
+          "cache storage",
+          "secondary region"
+        ],
+        "examTraps": [
+          "Believing that ASR failover or failback is fully automated.",
+          "Forgetting that target resources (VNet, subnet, resource groups, availability sets) must be created in the target region during replication setup."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Azure Site Recovery (ASR)",
+            "awsEquivalent": "AWS Elastic Disaster Recovery (AWS DRS)",
+            "keyDifferences": "Both services utilize a guest replication agent (ASR Mobility Service vs AWS Elastic Disaster Recovery Agent) to write continuously to a staging area (cache storage account vs EC2 replica instances and EBS staging volumes) before converting to target replica disks. ASR is built directly into Azure's Recovery Services vault, while AWS DRS runs as a standalone service console. AWS DRS is primarily cross-cloud/on-premises to AWS, whereas ASR excels at Azure-to-Azure, VMware-to-Azure, and on-premises-to-Azure."
+          }
+        ]
+      },
+      {
+        "keyPointId": "kp-10-06",
+        "topicName": "Backup Security: Multi-User Authorization & Resource Guards",
+        "whyItMatters": "Provides vital protection against malicious insider threats and ransomware by locking down vault actions using distinct RBAC scopes.",
+        "coreKnowledgePatterns": [
+          "Resource Guard First: You must create the Resource Guard resource first before enabling MUA on the Recovery Services vault [38].",
+          "Separate Tenant/Subscription: For maximum security, the Resource Guard should reside in a different subscription or Azure AD tenant with distinct administrators.",
+          "Prevent Deletion: Protecting critical operations like deleting backup data or modifying policies requires validation against the Resource Guard."
+        ],
+        "questionKeywords": [
+          "multi-user authorization",
+          "MUA",
+          "resource guard",
+          "delete vault",
+          "Vault1"
+        ],
+        "examTraps": [
+          "Creating custom RBAC roles or administrative units as the primary resource to secure backup deletions instead of a Resource Guard.",
+          "Assuming a vault administrator has default permission to modify or bypass the Resource Guard."
+        ],
+        "awsComparison": [
+          {
+            "azureConcept": "Resource Guard (MUA)",
+            "awsEquivalent": "AWS Backup Vault Lock (WORM / MFA Delete)",
+            "keyDifferences": "Both patterns protect backups from deletion by unauthorized or compromised users. AWS Backup Vault Lock uses a WORM (Write Once, Read Many) model with a locking policy that can prevent deletion even by the AWS root account. Azure MUA uses a Resource Guard (separate resource) with Azure RBAC to require distinct administrative authorization, aligning more with AWS multi-account governance (e.g., using AWS Organizations and SCPs) rather than a pure vault-lock policy."
+          }
+        ]
+      }
+    ]
+  },
+  "quizSection": {
+    "totalQuestions": 7,
+    "quizzes": [
+      {
+        "id": "q1",
+        "source": "Source B: AZ-104 exam2.pdf - Question #37",
+        "relatedKeyPointId": "kp-10-02",
+        "questionType": "multiple-choice",
+        "questionText": "Your company has an Azure subscription that includes a Recovery Services vault. You want to use Azure Backup to schedule a backup of your company's virtual machines (VMs) to the Recovery Services vault. Which of the following VMs can you back up? Choose all that apply.",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "VMs that run Windows 10."
+          },
+          {
+            "id": "opt_b",
+            "text": "VMs that run Windows Server 2012 or higher."
+          },
+          {
+            "id": "opt_c",
+            "text": "VMs that have NOT been shut down."
+          },
+          {
+            "id": "opt_d",
+            "text": "VMs that run Debian 8.2+."
+          },
+          {
+            "id": "opt_e",
+            "text": "VMs that have been shut down."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a",
+          "opt_b",
+          "opt_c",
+          "opt_d",
+          "opt_e"
+        ],
+        "explanation": "Azure Backup supports backing up a wide range of virtual machines, including 64-bit client OS (Windows 10), 64-bit Windows Server (from 2008 and higher), and endorsed Linux distributions (such as Debian 7.9+). Backups can be performed on VMs whether they are running or shut down (offline) because the backup is managed at the fabric and storage level."
+      },
+      {
+        "id": "q2",
+        "source": "Source B: AZ-104 exam2.pdf - Question #17",
+        "relatedKeyPointId": "kp-10-01",
+        "questionType": "single-choice",
+        "questionText": "You have a Recovery Service vault that you use to test backups. The test backups contain two protected virtual machines. You need to delete the Recovery Services vault. What should you do first?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "From the Recovery Service vault, delete the backup data."
+          },
+          {
+            "id": "opt_b",
+            "text": "Modify the disaster recovery properties of each virtual machine."
+          },
+          {
+            "id": "opt_c",
+            "text": "Modify the locks of each virtual machine."
+          },
+          {
+            "id": "opt_d",
+            "text": "From the Recovery Service vault, stop the backup of each backup item."
+          }
+        ],
+        "correctAnswers": [
+          "opt_d"
+        ],
+        "explanation": "To delete a Recovery Services vault, you must first remove any active dependencies. The first action is to stop backup jobs for each protected item, which unregisters the resources from the vault; only then can you delete the associated backup data and finally delete the empty vault resource. Options A, B, and C are incorrect because deleting the backup data is done after stopping backups, and modifying locks or disaster recovery properties does not unregister the backup items from the vault."
+      },
+      {
+        "id": "q3",
+        "source": "Source B: AZ-104 exam2.pdf - Question #131",
+        "relatedKeyPointId": "kp-10-06",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains a Recovery Services vault named Vault1. You need to enable multi-user authorization (MAU) for Vault1. Which resource should you create first?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "an administrative unit"
+          },
+          {
+            "id": "opt_b",
+            "text": "a managed identity"
+          },
+          {
+            "id": "opt_c",
+            "text": "a resource guard"
+          },
+          {
+            "id": "opt_d",
+            "text": "a custom Azure role"
+          }
+        ],
+        "correctAnswers": [
+          "opt_c"
+        ],
+        "explanation": "Multi-user authorization (MUA) for Azure Backup utilizes a Resource Guard to protect critical operations on the vault. The Resource Guard must be created first before it can be associated with Vault1 to enforce validation of critical operations. Options A, B, and D are incorrect because administrative units, managed identities, and custom roles do not provide the built-in MAU resource protection required by Azure Backup."
+      },
+      {
+        "id": "q4",
+        "source": "Source B: AZ-104 exam2.pdf - Question #18",
+        "relatedKeyPointId": "kp-10-01",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription named Subscription1 that contains the resources shown in the following table:\n- VM1 (Virtual machine, Central US)\n- Vault1 (Recovery Services vault, Central US)\n- Vault2 (Recovery Services vault, West US)\n- storage1 (Storage account, West US)\nIn storage1, you create a blob container named blob1 and a file share named share1. Which resources can be backed up to Vault1 and Vault2?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Vault1: VM1 and share1; Vault2: storage1 only"
+          },
+          {
+            "id": "opt_b",
+            "text": "Vault1: VM1 only; Vault2: share1 only"
+          },
+          {
+            "id": "opt_c",
+            "text": "Vault1: VM1 and blob1; Vault2: share1 only"
+          },
+          {
+            "id": "opt_d",
+            "text": "Vault1: VM1 only; Vault2: storage1 and share1"
+          }
+        ],
+        "correctAnswers": [
+          "opt_b"
+        ],
+        "explanation": "Recovery Services vaults are regional resources, meaning you can only protect virtual machines and file shares that reside in the same region as the vault. VM1 (Central US) can only be backed up to Vault1 (Central US), and share1 (in storage1, West US) can only be backed up to Vault2 (West US). Raw blobs cannot be backed up directly to a Recovery Services vault, making Options A, C, and D incorrect."
+      },
+      {
+        "id": "q5",
+        "source": "Source B: AZ-104 exam2.pdf - Question #3",
+        "relatedKeyPointId": "kp-10-01",
+        "questionType": "single-choice",
+        "questionText": "You have the Azure virtual machines shown in the following table:\n- VM1 (West Europe)\n- VM2 (West Europe)\n- VM3 (North Europe)\n- VM4 (North Europe)\nYou have a Recovery Services vault that protects VM1 and VM2. You need to protect VM3 and VM4 by using Recovery Services. What should you do first?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Create a new Recovery Services vault"
+          },
+          {
+            "id": "opt_b",
+            "text": "Create a storage account"
+          },
+          {
+            "id": "opt_c",
+            "text": "Configure the extensions for VM3 and VM4"
+          },
+          {
+            "id": "opt_d",
+            "text": "Create a new backup policy"
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "Recovery Services vaults can only protect virtual machines that reside in the same Azure region. Since VM3 and VM4 are in North Europe and the existing vault resides in West Europe (protecting VM1 and VM2), you must first create a new Recovery Services vault in North Europe to protect them. Option D is incorrect because backup policies are scoped to a vault and cannot span regions, and Options B and C do not address the regional resource boundary."
+      },
+      {
+        "id": "q6",
+        "source": "Source B: AZ-104 exam2.pdf - Question #8",
+        "relatedKeyPointId": "kp-10-02",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure virtual machine named VM1. You use Azure Backup to create a backup of VM1 named Backup1. After creating Backup1, you perform the following changes to VM1:\n- Modify the size of VM1.\n- Copy a file named Budget.xls to a folder named Data.\n- Reset the password for the built-in administrator account.\n- Add a data disk to VM1.\nAn administrator uses the Replace existing option to restore VM1 from Backup1. You need to ensure that all the changes to VM1 are restored. Which change should you perform again?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "Modify the size of VM1."
+          },
+          {
+            "id": "opt_b",
+            "text": "Reset the password for the built-in administrator account."
+          },
+          {
+            "id": "opt_c",
+            "text": "Add a data disk."
+          },
+          {
+            "id": "opt_d",
+            "text": "Copy Budget.xls to Data."
+          }
+        ],
+        "correctAnswers": [
+          "opt_d"
+        ],
+        "explanation": "When restoring an Azure VM from a backup using the 'Replace existing' disk option, the entire contents of the existing OS disk are replaced with the backup image. As a result, guest-level file writes made after the backup point (such as copying Budget.xls) are lost and must be performed again. VM configuration changes (Option A) and added data disks (Option C) are preserved at the fabric layer, and administrator password resets (Option B) are either preserved or managed by local VM agent configurations, not OS-level disk content."
+      },
+      {
+        "id": "q7",
+        "source": "Source B: AZ-104 exam2.pdf - Question #50",
+        "relatedKeyPointId": "kp-10-02",
+        "questionType": "single-choice",
+        "questionText": "You have an Azure subscription that contains a virtual machine named VM1. You need to back up VM1. The solution must ensure that backups are stored across three availability zones in the primary region. Which three actions should you perform in sequence?",
+        "options": [
+          {
+            "id": "opt_a",
+            "text": "1. Create a Recovery Services vault; 2. Set Replication to Zone-redundant storage (ZRS); 3. For VM1, create a backup policy and configure the backup."
+          },
+          {
+            "id": "opt_b",
+            "text": "1. Create a Backup vault; 2. Set Replication to Locally-redundant storage (LRS); 3. Configure VM1 replication rules."
+          },
+          {
+            "id": "opt_c",
+            "text": "1. Create a Recovery Services vault; 2. Set Replication to Geo-redundant storage (GRS); 3. For VM1, configure cross-region restore."
+          },
+          {
+            "id": "opt_d",
+            "text": "1. Create a Storage Sync Service; 2. Install Azure File Sync agent; 3. Register the server and VM1."
+          }
+        ],
+        "correctAnswers": [
+          "opt_a"
+        ],
+        "explanation": "To achieve three availability zone backup storage redundancy, you must create a Recovery Services vault and configure its redundancy type to Zone-redundant storage (ZRS) first. Redundancy settings must be updated before any backup items are configured in the vault. Once ZRS is configured, you can define a backup policy and protect VM1. Option C is incorrect because GRS stores backups across paired regions rather than specifically across three zones in the primary region. Options B and D are incorrect as they utilize the wrong vault types and technologies entirely."
+      }
+    ]
+  }
+}
