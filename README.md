@@ -3,6 +3,7 @@ Some tools that I find useful
 
 ## Learning
 1. [AZ-104](https://hoang-khai.github.io/ScriptTools/certification/az-104/ 'Learn AZ-104')
+2. [English Material Generator](https://hoang-khai.github.io/ScriptTools/Eng-Materials/ 'Create english materials')
 
 ## Productivity tools
 1. [Local Kanban](https://hoang-khai.github.io/ScriptTools/LocalKanban/index.html 'A simple kanban that uses your local storage') 
