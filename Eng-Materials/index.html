@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON → Markdown Converter</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-4">
+  <h1 class="h4 mb-4">JSON → Markdown Converter</h1>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label for="jsonInput" class="form-label">Paste JSON</label>
+      <textarea id="jsonInput" class="form-control" rows="24" placeholder="Paste JSON here..."></textarea>
+      <button id="submitBtn" class="btn btn-primary mt-2">Generate Markdown</button>
+      <div id="errorBox" class="text-danger mt-2"></div>
+    </div>
+    <div class="col-md-6">
+      <label for="mdOutput" class="form-label">Generated Markdown</label>
+      <textarea id="mdOutput" class="form-control" rows="24" readonly></textarea>
+      <button id="copyBtn" class="btn btn-secondary mt-2">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function jsonToMarkdown(data) {
+  let md = "";
+
+  // ---- Reading ----
+  md += "# Reading\n\n";
+  md += "## Reading passage:\n\n";
+
+  const paragraphs = (data.reading.markdownContent || "").split(/\n\n+/);
+  const bodyParas = [];
+  const footnotes = [];
+  const footnoteRegex = /^\[\^(\d+)\]\s+([^:]+):\s*([\s\S]*)$/;
+
+  paragraphs.forEach(p => {
+    const trimmed = p.trim();
+    if (!trimmed) return;
+    const m = trimmed.match(footnoteRegex);
+    if (m) {
+      const num = m[1];
+      let term = m[2].trim();
+      term = term.charAt(0).toLowerCase() + term.slice(1);
+      const def = m[3].trim();
+      footnotes.push(`* [^${num}] **${term}**: ${def}`);
+    } else {
+      bodyParas.push(trimmed);
+    }
+  });
+
+  md += bodyParas.join("\n\n") + "\n\n";
+
+  if (footnotes.length) {
+    md += "---\n\n**Footnotes:**\n" + footnotes.join("\n") + "\n\n";
+  }
+  md += "---\n\n";
+
+  // ---- Reading Comprehension ----
+  md += "## Reading Comprehension Questions\n\n";
+  (data.readingComprehension || []).forEach(q => {
+    md += `### Question ${q.id}: ${q.question}\n\n`;
+    ["A", "B", "C", "D"].forEach(letter => {
+      if (q.options && q.options[letter] !== undefined) {
+        md += `- **${letter}.** ${q.options[letter]}\n`;
+      }
+    });
+    md += "\n";
+  });
+  md += "---\n\n";
+
+  md += "## Answer Key\n\n";
+  (data.readingComprehension || []).forEach(q => {
+    md += `**Question ${q.id}**\n`;
+    md += `- **Correct Answer:** ${q.correctAnswer}\n`;
+    md += `- **Explanation:** ${q.explanation}\n\n`;
+  });
+
+  // ---- Vocabulary ----
+  md += "# Vocabulary\n\n";
+  md += `## Essential words for ${data.metadata.targetLevel}\n\n`;
+  (data.vocabulary || []).forEach(v => {
+    md += `* **${v.word}**: ${v.ipa} - ${v.vietnameseMeaning}\n`;
+    (v.expanded || []).forEach(e => {
+      md += `  * **${e.term}**: ${e.ipa} - ${e.meaning}\n`;
+    });
+  });
+  md += "\n---\n\n";
+
+  // ---- Exercises ----
+  md += "## Exercises\n\n";
+
+  const ex1 = data.exercises.exercise1TranslateEngVi;
+  md += `### ${ex1.title}\n\n`;
+  ex1.items.forEach((item, i) => { md += `${i + 1}. ${item.source}\n`; });
+  md += "\n";
+
+  const ex2 = data.exercises.exercise2SentenceCompletion;
+  md += `### ${ex2.title}\n\n`;
+  md += "#### Sentences:\n\n";
+  ex2.items.forEach((item, i) => { md += `${i + 1}. ${item.sentence}\n`; });
+  md += "\n#### Vocabulary List:\n\n";
+  ex2.wordBank.forEach(w => { md += `* **${w}**\n`; });
+  md += "\n";
+
+  const ex3 = data.exercises.exercise3PassageCompletion;
+  md += `### ${ex3.title}\n\n`;
+  md += `#### ${ex3.passageTitle}\n\n`;
+  md += `${ex3.passageText}\n\n`;
+  md += "#### Vocabulary List:\n\n";
+  ex3.wordBank.forEach(w => { md += `* **${w}**\n`; });
+  md += "\n";
+
+  const ex4 = data.exercises.exercise4TranslateViEng;
+  md += `### ${ex4.title}\n\n`;
+  ex4.items.forEach((item, i) => { md += `${i + 1}. ${item.source}\n`; });
+  md += "\n---\n\n";
+
+  md += "## Answer Key\n\n";
+
+  md += "### Exercise 1:\n\n";
+  ex1.items.forEach((item, i) => { md += `${i + 1}. ${item.targetAnswer}\n`; });
+  md += "\n";
+
+  md += "### Exercise 2:\n\n";
+  ex2.items.forEach((item, i) => { md += `${i + 1}. ${item.acceptedAnswers.join("/")}\n`; });
+  md += "\n";
+
+  md += "### Exercise 3:\n\n";
+  ex3.items.forEach((item, i) => { md += `${i + 1}. ${item.acceptedAnswers.join("/")}\n`; });
+  md += "\n";
+
+  md += "### Exercise 4:\n\n";
+  ex4.items.forEach((item, i) => { md += `${i + 1}. ${item.targetAnswer}\n`; });
+
+  return md.trim() + "\n";
+}
+
+document.getElementById("submitBtn").addEventListener("click", () => {
+  const errorBox = document.getElementById("errorBox");
+  const output = document.getElementById("mdOutput");
+  errorBox.textContent = "";
+  output.value = "";
+  try {
+    const data = JSON.parse(document.getElementById("jsonInput").value);
+    output.value = jsonToMarkdown(data);
+  } catch (e) {
+    errorBox.textContent = "Lỗi: " + e.message;
+  }
+});
+
+document.getElementById("copyBtn").addEventListener("click", () => {
+  const output = document.getElementById("mdOutput");
+  output.select();
+  document.execCommand("copy");
+});
+</script>
+</body>
+</html>
