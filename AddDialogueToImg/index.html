@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Công cụ thêm khung thoại + furigana</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#f4f1ec;--panel:#fff;--tx:#2a2622;--mut:#6f675e;--bd:#d9d2c8;--ac:#e8803a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1b19;--panel:#292623;--tx:#eee8e0;--mut:#a39a8f;--bd:#443f39}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,"Noto Sans JP",sans-serif}
+.app{display:flex;gap:12px;padding:12px;min-height:100vh}
+.side{width:330px;flex:none;background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:12px;align-self:flex-start;max-height:calc(100vh - 24px);overflow:auto}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.stage{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:8px;overflow:auto;text-align:center}
+canvas{max-width:100%;height:auto;touch-action:none;cursor:default;background:#888}
+h3{margin:12px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+h3:first-child{margin-top:0}
+label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;color:var(--mut)}
+input[type=number],select{width:90px;padding:4px 6px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--bd);border-radius:6px;background:none}
+input[type=range]{width:150px}
+textarea{width:100%;height:120px;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:15px/1.5 "Noto Sans JP",sans-serif;resize:vertical}
+button{padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);cursor:pointer;font:inherit}
+button:hover{border-color:var(--ac)}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+button.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac) inset}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.sw{width:24px;height:24px;border-radius:50%;padding:0;border:2px solid var(--bd)}
+.pair{display:flex;gap:4px;align-items:center}.pair input[type=range]{width:105px}.pair input[type=number]{width:58px}input[type=text]{width:150px;padding:4px 6px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+.hint{font-size:12px;color:var(--mut);margin:4px 0}
+code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;z-index:9}
+#ov img{max-width:100%;max-height:80vh}
+#ov p{color:#fff;margin:0}
+@media (max-width:820px){.app{flex-direction:column}.side{width:100%;max-height:none;order:2}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="side">
+  <h3>Ảnh & dự án</h3>
+  <div class="row"><button class="pri" id="btnImg">Chọn ảnh…</button><button id="btnExp" class="pri">Xuất PNG</button></div>
+  <div class="row" style="margin-top:6px"><button id="undo">↶ Hoàn tác</button><button id="save">Lưu dự án</button><button id="load">Mở dự án</button></div>
+  <input type="file" id="file" accept="image/*" hidden><input type="file" id="pfile" accept=".json" hidden>
+  <p class="hint">Kéo-thả ảnh vào vùng xem. Xuất đúng kích thước ảnh gốc. Dự án (.json) lưu toàn bộ khung/chữ để sửa tiếp sau này (không kèm ảnh). Phím mũi tên dịch khung 1px (Shift: 10px), Ctrl+Z hoàn tác.</p>
+
+  <h3>Khung thoại</h3>
+  <div class="row" id="list"></div>
+  <div class="row" style="margin-top:6px"><button id="add">+ Thêm</button><button id="dup">Nhân đôi</button><button id="del">Xoá</button></div>
+
+  <h3>Nội dung</h3>
+  <textarea id="text" spellcheck="false"></textarea>
+  <p class="hint">Ký âm: <code>[映画|えいが]館</code>. Enter để xuống dòng thủ công.</p>
+
+  <h3>Chữ</h3>
+  <label>Font <input type="text" id="ff" list="fl"></label>
+  <datalist id="fl"></datalist>
+  <div class="row"><button id="lf">Lấy danh sách font từ máy</button><button id="allf">Áp font & cỡ chữ cho mọi khung</button></div>
+  <p class="hint" id="fh">Gõ tên font cài trong máy (vd: Yu Gothic, Meiryo, Hiragino Mincho ProN) hoặc bấm nút để liệt kê.</p>
+  <label>Cỡ chữ chính <input type="number" id="fs" min="8" max="300"></label>
+  <label>Giãn dòng (× cỡ chữ) <input type="number" id="lh" step="0.1" min="1" max="4"></label>
+  <label>Cỡ ký âm (× cỡ chữ) <input type="number" id="rs" step="0.05" min="0.2" max="1"></label>
+  <label>Độ đậm <select id="fw"><option value="400">Regular</option><option value="500">Medium</option><option value="700">Bold</option></select></label>
+  <label>Căn lề <select id="al"><option value="c">Giữa</option><option value="l">Trái</option></select></label>
+  <label>Màu chữ <input type="color" id="tc"></label>
+
+  <h3>Kích thước khung</h3>
+  <label>Chế độ <select id="auto"><option value="1">Tự động theo chữ</option><option value="0">Thủ công</option></select></label>
+  <label>Rộng tối đa của chữ (tự động) <input type="number" id="mw" min="50" max="3000" step="10"></label>
+  <label>Rộng × Cao <span><input type="number" id="W" min="30" style="width:68px"> <input type="number" id="H" min="30" style="width:68px"></span></label>
+  <label>Lề trong (ngang / dọc) <span><input type="number" id="px" min="0" style="width:68px"> <input type="number" id="py" min="0" style="width:68px"></span></label>
+  <p class="hint">Kéo ô vuông ở góc dưới-phải của khung để chỉnh tay (tự chuyển sang thủ công).</p>
+
+  <h3>Viền & màu</h3>
+  <label>Màu viền <input type="color" id="bc"></label>
+  <div class="row" id="sws"></div>
+  <label>Màu nền <input type="color" id="fc"></label>
+  <label>Độ dày viền <input type="number" id="bw" min="0" max="40"></label>
+  <label>Độ cong góc <span class="pair"><input type="range" id="rad" min="0" max="150"><input type="number" id="rad_n" min="0" max="999"></span></label>
+
+  <h3>Đuôi</h3>
+  <label>Đuôi <select id="tail"><option value="1">Có</option><option value="0">Không</option></select></label>
+  <label>Độ rộng chân đuôi <span class="pair"><input type="range" id="tw" min="6" max="200"><input type="number" id="tw_n" min="1" max="999"></span></label>
+  <label>Đuôi cong (−100…100) <span class="pair"><input type="range" id="tcv" min="-100" max="100"><input type="number" id="tcv_n" min="-300" max="300"></span></label>
+  <label>Đuôi lệch (−90…90) <span class="pair"><input type="range" id="tsk" min="-90" max="90"><input type="number" id="tsk_n" min="-90" max="90"></span></label>
+  <p class="hint">Chấm xanh đặc: đầu đuôi. Chấm trắng viền xanh: gốc đuôi (dính viền, kéo dọc viền hoặc sang cạnh khác). “Cong” uốn đuôi như nét vẩy; “Lệch” làm một bên chân đuôi rộng hơn bên kia.</p>
+</div>
+<div class="main"><div class="stage" id="stage"><canvas id="cv"></canvas></div></div>
+</div>
+<div id="ov"><p>Nếu không tự tải về, nhấn giữ / chuột phải vào ảnh để lưu.</p><img id="oimg" alt=""><button id="oc">Đóng</button></div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const FB='"Noto Sans JP","Yu Gothic","Hiragino Kaku Gothic ProN",sans-serif';
+const fam=b=>`"${String(b.ff).replace(/"/g,'')}",${FB}`;
+let img=null,bubbles=[],sel=0,drag=null,hist=[];
+const PRESET=['#e8923a','#e8671a','#d9534f','#3b82c4','#3aa675','#d65fa3','#8b5cf6','#555555'];
+const base={text:'',ff:'Noto Sans JP',fs:30,lh:2,rs:.5,fw:'500',al:'c',mw:360,tc:'#222222',bc:'#e8923a',fc:'#fffdf8',bw:5,rad:28,px:26,py:14,auto:1,W:300,H:120,tail:1,tw:40,tcv:0,tsk:0,x:60,y:40,tx:150,ty:260,bx:null,by:null};
+const mk=o=>Object.assign({},base,o);
+bubbles=[mk({text:'あっ、[映画館|えいがかん]。[一緒|いっしょ]に\n[映画|えいが]を見ませんか。',tx:240,ty:300})];
+cv.width=1024;cv.height=768;
+
+// ---- parsing & layout
+function parse(t){const out=[];const re=/\[([^\]|]+)\|([^\]]+)\]/g;let i=0,m;
+ const plain=s=>{for(const ch of s)out.push({b:ch,r:''})};
+ while((m=re.exec(t))){plain(t.slice(i,m.index));out.push({b:m[1],r:m[2]});i=re.lastIndex}
+ plain(t.slice(i));return out}
+const NOSTART='、。，．！？」』）〕】ー…ぁぃぅぇぉっゃゅょァィゥェォッャュョ,.!?)';
+const fnt=(b,k)=>`${b.fw} ${b.fs*k}px ${fam(b)}`;
+function layout(b){
+ const wrapW=b.auto?b.mw:Math.max(10,b.W-2*b.px),lines=[];
+ b.text.split('\n').forEach(par=>{
+  const units=parse(par).map(u=>{
+   ctx.font=fnt(b,1);const bw=ctx.measureText(u.b).width;
+   let rw=0;if(u.r){ctx.font=fnt(b,b.rs);rw=ctx.measureText(u.r).width}
+   return{...u,bw,rw,w:Math.max(bw,rw)}});
+  let cur=[],w=0;
+  for(const u of units){
+   if(cur.length&&w+u.w>wrapW&&!(u.r===''&&NOSTART.includes(u.b))){lines.push({u:cur,w});cur=[];w=0}
+   cur.push(u);w+=u.w}
+  lines.push({u:cur,w});
+ });
+ const tw=Math.max(10,...lines.map(l=>l.w)),pitch=b.fs*b.lh;
+ b.lines=lines;b.pitch=pitch;b.textH=lines.length*pitch;
+ if(b.auto){b.w=tw+b.px*2;b.h=b.textH+b.py*2;b.W=Math.round(b.w);b.H=Math.round(b.h)}else{b.w=b.W;b.h=b.H}
+}
+
+// ---- drawing
+function rr(c,x,y,w,h,r){r=Math.min(r,w/2,h/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function snapBase(b){
+ if(b.bx==null){const dx=(b.tx-b.x-b.w/2)/(b.w/2),dy=(b.ty-b.y-b.h/2)/(b.h/2);
+  if(Math.abs(dx)>Math.abs(dy)){b.bx=dx>0?b.x+b.w:b.x;b.by=b.ty}else{b.by=dy>0?b.y+b.h:b.y;b.bx=b.tx}}
+ const hw=Math.min(b.tw/2,b.w/2-b.rad*.5,b.h/2)*(1+Math.abs(b.tsk)/100)+4,cl=(v,a,z)=>Math.max(a,Math.min(z,v));
+ const d=[Math.abs(b.bx-b.x),Math.abs(b.bx-b.x-b.w),Math.abs(b.by-b.y),Math.abs(b.by-b.y-b.h)];
+ b.edge=d.indexOf(Math.min(...d));
+ if(b.edge<2){b.bx=b.edge?b.x+b.w:b.x;b.by=cl(b.by,b.y+hw,b.y+b.h-hw)}
+ else{b.by=b.edge===3?b.y+b.h:b.y;b.bx=cl(b.bx,b.x+hw,b.x+b.w-hw)}}
+function tailPath(c,b){
+ snapBase(b);
+ const e=3,hw=Math.min(b.tw/2,b.w/2-b.rad*.5,b.h/2),sk=b.tsk/100;
+ const o=[[-1,0],[1,0],[0,-1],[0,1]][b.edge],t=b.edge<2?[0,1]:[1,0],h1=hw*(1+sk),h2=hw*(1-sk);
+ const P1=[b.bx-o[0]*e-t[0]*h1,b.by-o[1]*e-t[1]*h1],P2=[b.bx-o[0]*e+t[0]*h2,b.by-o[1]*e+t[1]*h2],T=[b.tx,b.ty];
+ const dx=T[0]-b.bx,dy=T[1]-b.by,len=Math.hypot(dx,dy)||1,cu=b.tcv/100*len*.6,pp=[-dy/len*cu,dx/len*cu];
+ c.beginPath();c.moveTo(P1[0],P1[1]);
+ c.quadraticCurveTo((P1[0]+T[0])/2+pp[0],(P1[1]+T[1])/2+pp[1],T[0],T[1]);
+ c.quadraticCurveTo((P2[0]+T[0])/2+pp[0],(P2[1]+T[1])/2+pp[1],P2[0],P2[1]);
+ c.closePath()}
+function drawBubble(b){
+ layout(b);
+ ctx.lineJoin='round';ctx.lineCap='round';
+ ctx.fillStyle=b.fc;ctx.strokeStyle=b.bc;ctx.lineWidth=b.bw*2;
+ const hasT=+b.tail;
+ rr(ctx,b.x,b.y,b.w,b.h,b.rad);if(b.bw)ctx.stroke();
+ if(hasT){tailPath(ctx,b);if(b.bw)ctx.stroke()}
+ rr(ctx,b.x,b.y,b.w,b.h,b.rad);ctx.fill();
+ if(hasT){tailPath(ctx,b);ctx.fill()}
+ ctx.fillStyle=b.tc;ctx.textBaseline='alphabetic';ctx.textAlign='left';
+ const top=b.auto?b.y+b.py:b.y+(b.h-b.textH)/2;
+ b.lines.forEach((ln,i)=>{
+  const y0=top+i*b.pitch,bl=y0+b.pitch/2+b.fs*.38,rl=bl-b.fs*.88-b.fs*.08;
+  let x=b.al==='l'?b.x+b.px:b.x+b.w/2-ln.w/2;
+  for(const u of ln.u){
+   ctx.font=fnt(b,1);ctx.fillText(u.b,x+(u.w-u.bw)/2,bl);
+   if(u.r){ctx.font=fnt(b,b.rs);ctx.fillText(u.r,x+(u.w-u.rw)/2,rl)}
+   x+=u.w}
+ });
+}
+function render(exporting){
+ ctx.clearRect(0,0,cv.width,cv.height);
+ if(img)ctx.drawImage(img,0,0);else{ctx.fillStyle='#8a8f98';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#fff';ctx.font='24px sans-serif';ctx.fillText('Chọn ảnh để bắt đầu',40,cv.height-30)}
+ bubbles.forEach(drawBubble);
+ if(!exporting&&bubbles[sel]){const b=bubbles[sel],k=cv.width/cv.clientWidth||1;
+  ctx.save();ctx.setLineDash([8*k,6*k]);ctx.strokeStyle='#1e90ff';ctx.lineWidth=2*k;ctx.strokeRect(b.x-b.bw-4*k,b.y-b.bw-4*k,b.w+2*(b.bw+4*k),b.h+2*(b.bw+4*k));ctx.restore();
+  ctx.fillStyle='#fff';ctx.strokeStyle='#1e90ff';ctx.lineWidth=3*k;const q=7*k;ctx.fillRect(b.x+b.w-q,b.y+b.h-q,2*q,2*q);ctx.strokeRect(b.x+b.w-q,b.y+b.h-q,2*q,2*q);
+  if(+b.tail){ctx.beginPath();ctx.arc(b.tx,b.ty,8*k,0,7);ctx.fillStyle='#1e90ff';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2*k;ctx.stroke();
+   ctx.beginPath();ctx.arc(b.bx,b.by,6*k,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#1e90ff';ctx.lineWidth=3*k;ctx.stroke()}}
+}
+
+// ---- history
+const snapJ=()=>JSON.stringify({bubbles,sel},(k,v)=>k==='lines'?undefined:v);
+function push(){const s=snapJ();if(hist[hist.length-1]!==s){hist.push(s);if(hist.length>80)hist.shift()}}
+function undo(){if(hist.length<2)return;hist.pop();const d=JSON.parse(hist[hist.length-1]);bubbles=d.bubbles;sel=Math.min(d.sel,bubbles.length-1);syncUI();render()}
+$('undo').onclick=undo;
+
+// ---- UI binding
+const F={ff:'s',fs:'n',lh:'n',rs:'n',fw:'s',al:'s',mw:'n',tc:'s',bc:'s',fc:'s',bw:'n',rad:'n',px:'n',py:'n',auto:'n',W:'n',H:'n',tail:'n',tw:'n',tcv:'n',tsk:'n'};
+const cur=()=>bubbles[sel];
+function syncFields(){const b=cur();if(!b)return;
+ if(document.activeElement!==$('text'))$('text').value=b.text;
+ for(const k in F)[k,k+'_n'].forEach(id=>{const e=$(id);if(e&&e!==document.activeElement)e.value=b[k]})}
+function syncUI(){syncFields();
+ $('list').innerHTML='';bubbles.forEach((_,i)=>{const e=document.createElement('button');e.textContent='#'+(i+1);if(i===sel)e.className='on';e.onclick=()=>{sel=i;syncUI();render()};$('list').appendChild(e)})}
+$('text').oninput=e=>{cur().text=e.target.value;render()};
+for(const k in F)[k,k+'_n'].forEach(id=>{const el=$(id);if(!el)return;
+ el.oninput=e=>{const b=cur();let v=e.target.value;if(F[k]==='n'){if(v==='')return;v=+v}
+  b[k]=v;if(k==='W'||k==='H')b.auto=0;render();syncFields()}});
+document.querySelector('.side').addEventListener('change',push);
+$('sws').innerHTML='';PRESET.forEach(c=>{const s=document.createElement('button');s.className='sw';s.style.background=c;s.onclick=()=>{cur().bc=c;syncFields();render();push()};$('sws').appendChild(s)});
+function addB(t){const p=cur()||base;bubbles.push(mk({...p,text:t,x:p.x+30,y:p.y+30,tx:p.tx+30,ty:p.ty+30,bx:p.bx==null?null:p.bx+30,by:p.by==null?null:p.by+30}));sel=bubbles.length-1;syncUI();render();push()}
+$('add').onclick=()=>addB('新しい[台詞|せりふ]');$('dup').onclick=()=>addB(cur().text);
+$('del').onclick=()=>{if(!bubbles.length)return;bubbles.splice(sel,1);sel=Math.max(0,sel-1);if(!bubbles.length)bubbles.push(mk({text:''}));syncUI();render();push()};
+$('allf').onclick=()=>{const c=cur();bubbles.forEach(b=>{['ff','fs','lh','rs','fw'].forEach(k=>b[k]=c[k])});render();push()};
+
+// ---- fonts
+const DEF=['Noto Sans JP','Yu Gothic','Yu Mincho','Meiryo','MS Gothic','MS Mincho','Hiragino Kaku Gothic ProN','Hiragino Maru Gothic ProN','Hiragino Mincho ProN','Arial','Times New Roman'];
+function fillFonts(a){$('fl').innerHTML='';[...new Set(a)].forEach(n=>{const o=document.createElement('option');o.value=n;$('fl').appendChild(o)})}
+fillFonts(DEF);
+$('lf').onclick=async()=>{
+ if(!window.queryLocalFonts){$('fh').textContent='Trình duyệt này không hỗ trợ liệt kê font (dùng Chrome/Edge). Bạn vẫn có thể gõ trực tiếp tên font.';return}
+ try{const l=await queryLocalFonts();fillFonts(DEF.concat(l.map(f=>f.family)));$('fh').textContent='Đã nạp '+new Set(l.map(f=>f.family)).size+' font. Bấm vào ô Font để chọn.'}
+ catch(e){$('fh').textContent='Chưa được cấp quyền đọc font. Bạn vẫn có thể gõ trực tiếp tên font.'}};
+
+// ---- image & project loading
+function loadFile(f){if(!f||!f.type.startsWith('image/'))return;const im=new Image();im.onload=()=>{img=im;cv.width=im.naturalWidth;cv.height=im.naturalHeight;
+ const s=cv.width/1024;bubbles.forEach(b=>{b.fs=Math.round(30*s);b.mw=Math.round(360*s);b.px=Math.round(26*s);b.py=Math.round(14*s);b.bw=Math.round(5*s);b.rad=Math.round(28*s);b.tw=Math.round(40*s)});syncUI();render();push()};im.src=URL.createObjectURL(f)}
+$('btnImg').onclick=()=>$('file').click();$('file').onchange=e=>loadFile(e.target.files[0]);
+const st=$('stage');st.ondragover=e=>e.preventDefault();st.ondrop=e=>{e.preventDefault();loadFile(e.dataTransfer.files[0])};
+$('load').onclick=()=>$('pfile').click();
+$('pfile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());bubbles=d.bubbles.map(b=>mk(b));sel=0;syncUI();render();push()}catch(x){alert('File dự án không hợp lệ')}e.target.value=''};
+
+// ---- pointer
+function pos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}}
+cv.onpointerdown=e=>{const p=pos(e),k=cv.width/cv.clientWidth,s=cur(),d=(x,y)=>Math.hypot(p.x-x,p.y-y);
+ if(s&&+s.tail&&d(s.tx,s.ty)<16*k)drag={t:'tail',b:s};
+ else if(s&&+s.tail&&s.bx!=null&&d(s.bx,s.by)<14*k)drag={t:'base',b:s};
+ else if(s&&d(s.x+s.w,s.y+s.h)<16*k)drag={t:'size',b:s};
+ else{for(let i=bubbles.length-1;i>=0;i--){const b=bubbles[i];if(p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h){sel=i;syncUI();
+  drag={t:'move',b,ox:p.x-b.x,oy:p.y-b.y,tdx:b.tx-b.x,tdy:b.ty-b.y,bdx:b.bx==null?null:b.bx-b.x,bdy:b.by==null?null:b.by-b.y};break}}}
+ if(drag){cv.setPointerCapture(e.pointerId);render()}};
+cv.onpointermove=e=>{if(!drag)return;const p=pos(e),b=drag.b;
+ if(drag.t==='tail'){b.tx=p.x;b.ty=p.y}
+ else if(drag.t==='base'){b.bx=p.x;b.by=p.y}
+ else if(drag.t==='size'){b.auto=0;b.W=Math.round(Math.max(30,p.x-b.x));b.H=Math.round(Math.max(30,p.y-b.y));syncFields()}
+ else{b.x=p.x-drag.ox;b.y=p.y-drag.oy;b.tx=b.x+drag.tdx;b.ty=b.y+drag.tdy;if(drag.bdx!=null){b.bx=b.x+drag.bdx;b.by=b.y+drag.bdy}}
+ render()};
+cv.onpointerup=()=>{if(drag){drag=null;syncFields();push()}};
+document.addEventListener('keydown',e=>{
+ if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+ if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();return}
+ const m={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key],b=cur();if(!m||!b)return;
+ e.preventDefault();const n=e.shiftKey?10:1,dx=m[0]*n,dy=m[1]*n;b.x+=dx;b.y+=dy;b.tx+=dx;b.ty+=dy;if(b.bx!=null){b.bx+=dx;b.by+=dy}render();push()});
+
+// ---- export / save
+async function saveBlob(blob,name,showOv){
+ try{const d=await claude.use('downloads');if(d){await d.save({filename:name,data:blob});return}}catch(e){}
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();
+ if(showOv){$('oimg').src=url;$('ov').style.display='flex'}}
+$('btnExp').onclick=async()=>{render(true);const blob=await new Promise(r=>cv.toBlob(r,'image/png'));render();saveBlob(blob,'speech-bubbles.png',true)};
+$('save').onclick=()=>saveBlob(new Blob([snapJ()],{type:'application/json'}),'bubbles-project.json',false);
+$('oc').onclick=()=>$('ov').style.display='none';
+
+syncUI();push();
+(document.fonts?Promise.all(['400','500','700'].map(w=>document.fonts.load(`${w} 30px "Noto Sans JP"`,'あ映画漢字'))).catch(()=>{}):Promise.resolve()).then(render);
+if(document.fonts)document.fonts.ready.then(render);
+</script>
+</body>
+</html>
