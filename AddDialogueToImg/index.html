@@ -14,14 +14,25 @@ html,body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui
 .side{width:330px;flex:none;background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:12px;align-self:flex-start;max-height:calc(100vh - 24px);overflow:auto}
 .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
 .stage{background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:8px;overflow:auto;text-align:center}
-canvas{max-width:100%;height:auto;touch-action:none;cursor:default;background:#888}
+canvas{display:block;max-width:100%;height:auto;touch-action:none;cursor:default;background:#888}
 h3{margin:12px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
 h3:first-child{margin-top:0}
 label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0;color:var(--mut)}
 input[type=number],select{width:90px;padding:4px 6px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
 input[type=color]{width:44px;height:28px;padding:0;border:1px solid var(--bd);border-radius:6px;background:none}
 input[type=range]{width:150px}
-textarea{width:100%;height:120px;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:15px/1.5 "Noto Sans JP",sans-serif;resize:vertical}
+:root{--br:#d9661f;--rb:#1f6fbf}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--br:#ffa05c;--rb:#7ab8f5}}
+.ed{position:relative;background:var(--bg);border-radius:8px}
+.ed pre,.ed textarea{margin:0;width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px;font:15px/1.5 "Noto Sans JP",sans-serif;letter-spacing:0;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal}
+.ed textarea{display:block;height:130px;position:relative;z-index:1;background:transparent;color:transparent;caret-color:var(--tx);resize:vertical;overflow:auto}
+.ed textarea::selection{background:rgba(30,144,255,.3);color:transparent}
+.ed pre{position:absolute;inset:0;z-index:0;overflow:auto;pointer-events:none;color:var(--tx);border-color:transparent}
+.br{color:var(--br);background:rgba(232,128,58,.25)}
+.bs{text-decoration:underline;text-decoration-color:var(--br);text-decoration-thickness:2px;text-underline-offset:3px}
+.sp{color:var(--mut);background:rgba(128,128,128,.22)}
+.rb{color:var(--rb)}
+.cc{background:rgba(128,128,128,.25)}
+.er{background:#d9534f;color:#fff}
 button{padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);cursor:pointer;font:inherit}
 button:hover{border-color:var(--ac)}
 button.pri{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
@@ -29,6 +40,14 @@ button.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac) inset}
 .row{display:flex;flex-wrap:wrap;gap:6px}
 .sw{width:24px;height:24px;border-radius:50%;padding:0;border:2px solid var(--bd)}
 .pair{display:flex;gap:4px;align-items:center}.pair input[type=range]{width:105px}.pair input[type=number]{width:58px}input[type=text]{width:150px;padding:4px 6px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+.wrap{position:relative;display:inline-block;max-width:100%;vertical-align:top}
+.fp{position:absolute;width:240px;background:var(--panel);border:1px solid var(--bd);border-radius:12px;padding:10px;box-shadow:0 6px 24px rgba(0,0,0,.3);text-align:left;z-index:5;transition:opacity .15s}
+.fp.drag{opacity:.25;pointer-events:none}
+.fp .hd{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px;font-weight:600}
+.fp label{margin:5px 0}
+details{border:1px solid var(--bd);border-radius:10px;padding:6px 10px;margin:0 0 8px}
+summary{cursor:pointer;font-weight:600;padding:3px 0}
+details[open]>summary{margin-bottom:6px}
 .hint{font-size:12px;color:var(--mut);margin:4px 0}
 code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;z-index:9}
@@ -40,54 +59,56 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
 <body>
 <div class="app">
 <div class="side">
-  <h3>Ảnh & dự án</h3>
-  <div class="row"><button class="pri" id="btnImg">Chọn ảnh…</button><button id="btnExp" class="pri">Xuất PNG</button></div>
-  <div class="row" style="margin-top:6px"><button id="undo">↶ Hoàn tác</button><button id="save">Lưu dự án</button><button id="load">Mở dự án</button></div>
-  <input type="file" id="file" accept="image/*" hidden><input type="file" id="pfile" accept=".json" hidden>
-  <p class="hint">Kéo-thả ảnh vào vùng xem. Xuất đúng kích thước ảnh gốc. Dự án (.json) lưu toàn bộ khung/chữ để sửa tiếp sau này (không kèm ảnh). Phím mũi tên dịch khung 1px (Shift: 10px), Ctrl+Z hoàn tác.</p>
-
-  <h3>Khung thoại</h3>
-  <div class="row" id="list"></div>
-  <div class="row" style="margin-top:6px"><button id="add">+ Thêm</button><button id="dup">Nhân đôi</button><button id="del">Xoá</button></div>
-
-  <h3>Nội dung</h3>
-  <textarea id="text" spellcheck="false"></textarea>
-  <p class="hint">Ký âm: <code>[映画|えいが]館</code>. Enter để xuống dòng thủ công.</p>
-
-  <h3>Chữ</h3>
-  <label>Font <input type="text" id="ff" list="fl"></label>
-  <datalist id="fl"></datalist>
-  <div class="row"><button id="lf">Lấy danh sách font từ máy</button><button id="allf">Áp font & cỡ chữ cho mọi khung</button></div>
-  <p class="hint" id="fh">Gõ tên font cài trong máy (vd: Yu Gothic, Meiryo, Hiragino Mincho ProN) hoặc bấm nút để liệt kê.</p>
-  <label>Cỡ chữ chính <input type="number" id="fs" min="8" max="300"></label>
-  <label>Giãn dòng (× cỡ chữ) <input type="number" id="lh" step="0.1" min="1" max="4"></label>
-  <label>Cỡ ký âm (× cỡ chữ) <input type="number" id="rs" step="0.05" min="0.2" max="1"></label>
-  <label>Độ đậm <select id="fw"><option value="400">Regular</option><option value="500">Medium</option><option value="700">Bold</option></select></label>
-  <label>Căn lề <select id="al"><option value="c">Giữa</option><option value="l">Trái</option></select></label>
+  <details open><summary>① Ảnh & dự án</summary>
+   <div class="row"><button class="pri" id="btnImg">Chọn ảnh…</button><button id="btnExp" class="pri">Xuất PNG</button></div>
+   <div class="row" style="margin-top:6px"><button id="undo">↶ Hoàn tác</button><button id="save">Lưu dự án</button><button id="load">Mở dự án</button></div>
+   <input type="file" id="file" accept="image/*" hidden><input type="file" id="pfile" accept=".json" hidden>
+   <p class="hint">Kéo-thả ảnh vào vùng xem. Xuất đúng kích thước ảnh gốc. File dự án (.json) lưu khung & chữ, không kèm ảnh.</p>
+  </details>
+  <details open><summary>② Khung thoại & nội dung</summary>
+   <div class="row" id="list"></div>
+   <div class="row" style="margin:6px 0"><button id="add">+ Thêm khung</button></div>
+   <div class="ed"><pre id="hl" aria-hidden="true"></pre><textarea id="text" spellcheck="false"></textarea></div>
+   <div class="row" style="margin-top:6px;align-items:center"><button id="rb" title="Bôi đen chữ rồi bấm">[ ] Thêm ký âm</button><button id="cb" title="Bôi đen chữ rồi bấm">Tô màu vùng chọn</button><input type="color" id="pc" value="#d9534f"></div>
+   <p class="hint">Trong ô soạn: ngoặc <span class="br">[ ]</span> màu cam, chữ chính <span class="bs">gạch chân</span>, <span class="rb">ký âm màu xanh</span>, mã màu <span class="cc">#313131</span>; ngoặc thừa/thiếu báo đỏ <span class="er">[</span>.<br>Cú pháp: <code>[映画|えいが]</code> ký âm · <code>[恋愛|れんあい|#313131]</code> ký âm + màu · <code>[恋愛||#313131]</code> chỉ tô màu. Không có mã màu thì dùng màu chữ chung. Enter để xuống dòng.</p>
+  </details>
+  <details><summary>③ Font & giãn dòng</summary>
+   <label>Font <input type="text" id="ff" list="fl"></label>
+   <datalist id="fl"></datalist>
+   <div class="row"><button id="lf">Liệt kê font trong máy</button><button id="allf">Áp font & cỡ chữ cho mọi khung</button></div>
+   <p class="hint" id="fh">Gõ tên font cài trong máy (vd: Yu Gothic, Meiryo, Hiragino Mincho ProN) hoặc bấm nút để liệt kê.</p>
+   <label>Giãn dòng (× cỡ chữ) <input type="number" id="lh" step="0.1" min="1" max="4"></label>
+   <label>Cỡ ký âm (× cỡ chữ) <input type="number" id="rs" step="0.05" min="0.2" max="1"></label>
+   <label>Độ đậm <select id="fw"><option value="400">Regular</option><option value="500">Medium</option><option value="700">Bold</option></select></label>
+   <label>Căn lề <select id="al"><option value="c">Giữa</option><option value="l">Trái</option></select></label>
+  </details>
+  <details><summary>④ Kích thước khung</summary>
+   <label>Chế độ <select id="auto"><option value="1">Tự động theo chữ</option><option value="0">Thủ công</option></select></label>
+   <label>Rộng tối đa của chữ (tự động) <input type="number" id="mw" min="50" max="3000" step="10"></label>
+   <label>Rộng × Cao <span><input type="number" id="W" min="30" style="width:68px"> <input type="number" id="H" min="30" style="width:68px"></span></label>
+   <label>Lề trong (ngang / dọc) <span><input type="number" id="px" min="0" style="width:68px"> <input type="number" id="py" min="0" style="width:68px"></span></label>
+   <p class="hint">Hoặc kéo ô vuông ở góc dưới-phải khung.</p>
+  </details>
+  <details><summary>⑤ Đuôi nâng cao</summary>
+   <label>Độ rộng chân đuôi <span class="pair"><input type="range" id="tw" min="6" max="200"><input type="number" id="tw_n" min="1" max="999"></span></label>
+   <label>Đuôi cong <span class="pair"><input type="range" id="tcv" min="-100" max="100"><input type="number" id="tcv_n" min="-300" max="300"></span></label>
+   <label>Đuôi lệch <span class="pair"><input type="range" id="tsk" min="-90" max="90"><input type="number" id="tsk_n" min="-90" max="90"></span></label>
+   <p class="hint">Chấm xanh đặc: đầu đuôi. Chấm trắng viền xanh: gốc đuôi (kéo dọc viền hoặc sang cạnh khác). Phím mũi tên dịch khung (Shift: 10px), Ctrl+Z hoàn tác.</p>
+  </details>
+  <p class="hint">💡 Bấm chọn một khung trên ảnh: bảng nhanh (màu, cỡ chữ, viền, bo góc…) hiện nổi ngay cạnh khung.</p>
+</div>
+<div class="main"><div class="stage" id="stage"><div class="wrap" id="wrap"><canvas id="cv"></canvas>
+ <div class="fp" id="fp">
+  <div class="hd"><span id="fpn">Khung #1</span><span class="row"><button id="dup" title="Nhân đôi khung">⧉ Nhân đôi</button><button id="del" title="Xoá khung">🗑</button></span></div>
   <label>Màu chữ <input type="color" id="tc"></label>
-
-  <h3>Kích thước khung</h3>
-  <label>Chế độ <select id="auto"><option value="1">Tự động theo chữ</option><option value="0">Thủ công</option></select></label>
-  <label>Rộng tối đa của chữ (tự động) <input type="number" id="mw" min="50" max="3000" step="10"></label>
-  <label>Rộng × Cao <span><input type="number" id="W" min="30" style="width:68px"> <input type="number" id="H" min="30" style="width:68px"></span></label>
-  <label>Lề trong (ngang / dọc) <span><input type="number" id="px" min="0" style="width:68px"> <input type="number" id="py" min="0" style="width:68px"></span></label>
-  <p class="hint">Kéo ô vuông ở góc dưới-phải của khung để chỉnh tay (tự chuyển sang thủ công).</p>
-
-  <h3>Viền & màu</h3>
   <label>Màu viền <input type="color" id="bc"></label>
   <div class="row" id="sws"></div>
   <label>Màu nền <input type="color" id="fc"></label>
+  <label>Cỡ chữ <input type="number" id="fs" min="8" max="300"></label>
   <label>Độ dày viền <input type="number" id="bw" min="0" max="40"></label>
-  <label>Độ cong góc <span class="pair"><input type="range" id="rad" min="0" max="150"><input type="number" id="rad_n" min="0" max="999"></span></label>
-
-  <h3>Đuôi</h3>
+  <label>Bo góc <span class="pair"><input type="range" id="rad" min="0" max="150"><input type="number" id="rad_n" min="0" max="999"></span></label>
   <label>Đuôi <select id="tail"><option value="1">Có</option><option value="0">Không</option></select></label>
-  <label>Độ rộng chân đuôi <span class="pair"><input type="range" id="tw" min="6" max="200"><input type="number" id="tw_n" min="1" max="999"></span></label>
-  <label>Đuôi cong (−100…100) <span class="pair"><input type="range" id="tcv" min="-100" max="100"><input type="number" id="tcv_n" min="-300" max="300"></span></label>
-  <label>Đuôi lệch (−90…90) <span class="pair"><input type="range" id="tsk" min="-90" max="90"><input type="number" id="tsk_n" min="-90" max="90"></span></label>
-  <p class="hint">Chấm xanh đặc: đầu đuôi. Chấm trắng viền xanh: gốc đuôi (dính viền, kéo dọc viền hoặc sang cạnh khác). “Cong” uốn đuôi như nét vẩy; “Lệch” làm một bên chân đuôi rộng hơn bên kia.</p>
-</div>
-<div class="main"><div class="stage" id="stage"><canvas id="cv"></canvas></div></div>
+ </div></div></div></div>
 </div>
 <div id="ov"><p>Nếu không tự tải về, nhấn giữ / chuột phải vào ảnh để lưu.</p><img id="oimg" alt=""><button id="oc">Đóng</button></div>
 
@@ -104,9 +125,9 @@ bubbles=[mk({text:'あっ、[映画館|えいがかん]。[一緒|いっしょ]�
 cv.width=1024;cv.height=768;
 
 // ---- parsing & layout
-function parse(t){const out=[];const re=/\[([^\]|]+)\|([^\]]+)\]/g;let i=0,m;
- const plain=s=>{for(const ch of s)out.push({b:ch,r:''})};
- while((m=re.exec(t))){plain(t.slice(i,m.index));out.push({b:m[1],r:m[2]});i=re.lastIndex}
+function parse(t){const out=[];const re=/\[([^\]|]+)\|([^\]|]*)(?:\|(#[0-9a-fA-F]{3,8}))?\]/g;let i=0,m;
+ const plain=s=>{for(const ch of s)out.push({b:ch,r:'',c:''})};
+ while((m=re.exec(t))){plain(t.slice(i,m.index));out.push({b:m[1],r:m[2],c:m[3]||''});i=re.lastIndex}
  plain(t.slice(i));return out}
 const NOSTART='、。，．！？」』）〕】ー…ぁぃぅぇぉっゃゅょァィゥェォッャュョ,.!?)';
 const fnt=(b,k)=>`${b.fw} ${b.fs*k}px ${fam(b)}`;
@@ -163,7 +184,7 @@ function drawBubble(b){
   const y0=top+i*b.pitch,bl=y0+b.pitch/2+b.fs*.38,rl=bl-b.fs*.88-b.fs*.08;
   let x=b.al==='l'?b.x+b.px:b.x+b.w/2-ln.w/2;
   for(const u of ln.u){
-   ctx.font=fnt(b,1);ctx.fillText(u.b,x+(u.w-u.bw)/2,bl);
+   ctx.fillStyle=u.c||b.tc;ctx.font=fnt(b,1);ctx.fillText(u.b,x+(u.w-u.bw)/2,bl);
    if(u.r){ctx.font=fnt(b,b.rs);ctx.fillText(u.r,x+(u.w-u.rw)/2,rl)}
    x+=u.w}
  });
@@ -172,6 +193,7 @@ function render(exporting){
  ctx.clearRect(0,0,cv.width,cv.height);
  if(img)ctx.drawImage(img,0,0);else{ctx.fillStyle='#8a8f98';ctx.fillRect(0,0,cv.width,cv.height);ctx.fillStyle='#fff';ctx.font='24px sans-serif';ctx.fillText('Chọn ảnh để bắt đầu',40,cv.height-30)}
  bubbles.forEach(drawBubble);
+ if(!exporting)placePanel();
  if(!exporting&&bubbles[sel]){const b=bubbles[sel],k=cv.width/cv.clientWidth||1;
   ctx.save();ctx.setLineDash([8*k,6*k]);ctx.strokeStyle='#1e90ff';ctx.lineWidth=2*k;ctx.strokeRect(b.x-b.bw-4*k,b.y-b.bw-4*k,b.w+2*(b.bw+4*k),b.h+2*(b.bw+4*k));ctx.restore();
   ctx.fillStyle='#fff';ctx.strokeStyle='#1e90ff';ctx.lineWidth=3*k;const q=7*k;ctx.fillRect(b.x+b.w-q,b.y+b.h-q,2*q,2*q);ctx.strokeRect(b.x+b.w-q,b.y+b.h-q,2*q,2*q);
@@ -179,6 +201,11 @@ function render(exporting){
    ctx.beginPath();ctx.arc(b.bx,b.by,6*k,0,7);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#1e90ff';ctx.lineWidth=3*k;ctx.stroke()}}
 }
 
+function placePanel(){const b=cur(),fp=$('fp'),w=$('wrap');if(!b)return;
+ const k=cv.clientWidth/cv.width,pw=fp.offsetWidth,ph=fp.offsetHeight,ww=w.clientWidth,wh=w.clientHeight;
+ let l=(b.x+b.w+b.bw+14)*k;if(l+pw>ww-4)l=(b.x-b.bw-14)*k-pw;l=Math.max(4,Math.min(ww-pw-4,l));
+ let t=Math.max(4,Math.min(wh-ph-4,b.y*k));fp.style.left=l+'px';fp.style.top=t+'px';fp.classList.toggle('drag',!!drag)}
+window.addEventListener('resize',()=>render());
 // ---- history
 const snapJ=()=>JSON.stringify({bubbles,sel},(k,v)=>k==='lines'?undefined:v);
 function push(){const s=snapJ();if(hist[hist.length-1]!==s){hist.push(s);if(hist.length>80)hist.shift()}}
@@ -189,21 +216,31 @@ $('undo').onclick=undo;
 const F={ff:'s',fs:'n',lh:'n',rs:'n',fw:'s',al:'s',mw:'n',tc:'s',bc:'s',fc:'s',bw:'n',rad:'n',px:'n',py:'n',auto:'n',W:'n',H:'n',tail:'n',tw:'n',tcv:'n',tsk:'n'};
 const cur=()=>bubbles[sel];
 function syncFields(){const b=cur();if(!b)return;
- if(document.activeElement!==$('text'))$('text').value=b.text;
+ if(document.activeElement!==$('text'))$('text').value=b.text;hl();
  for(const k in F)[k,k+'_n'].forEach(id=>{const e=$(id);if(e&&e!==document.activeElement)e.value=b[k]})}
-function syncUI(){syncFields();
+function syncUI(){syncFields();$('fpn').textContent='Khung #'+(sel+1);
  $('list').innerHTML='';bubbles.forEach((_,i)=>{const e=document.createElement('button');e.textContent='#'+(i+1);if(i===sel)e.className='on';e.onclick=()=>{sel=i;syncUI();render()};$('list').appendChild(e)})}
-$('text').oninput=e=>{cur().text=e.target.value;render()};
+$('text').oninput=e=>{cur().text=e.target.value;hl();render()};
+function syncScroll(){const p=$('hl'),t=$('text');p.scrollTop=t.scrollTop;p.scrollLeft=t.scrollLeft}
+$('text').onscroll=syncScroll;
+function hl(){const t=$('text').value,re=/\[([^\]|]+)\|([^\]|]*)(?:\|(#[0-9a-fA-F]{3,8}))?\]/g;let o='',i=0,m;
+ const e=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'),pl=s=>e(s).replace(/[\[\]]/g,'<span class="er">$&</span>');
+ while((m=re.exec(t))){o+=pl(t.slice(i,m.index))+'<span class="br">[</span><span class="bs">'+e(m[1])+'</span><span class="sp">|</span><span class="rb">'+e(m[2])+'</span>'+(m[3]?'<span class="sp">|</span><span class="cc" style="color:'+m[3]+'">'+m[3]+'</span>':'')+'<span class="br">]</span>';i=re.lastIndex}
+ $('hl').innerHTML=o+pl(t.slice(i))+'\n ';syncScroll()}
 for(const k in F)[k,k+'_n'].forEach(id=>{const el=$(id);if(!el)return;
  el.oninput=e=>{const b=cur();let v=e.target.value;if(F[k]==='n'){if(v==='')return;v=+v}
   b[k]=v;if(k==='W'||k==='H')b.auto=0;render();syncFields()}});
-document.querySelector('.side').addEventListener('change',push);
+document.querySelectorAll('.side,.fp').forEach(e=>e.addEventListener('change',push));
 $('sws').innerHTML='';PRESET.forEach(c=>{const s=document.createElement('button');s.className='sw';s.style.background=c;s.onclick=()=>{cur().bc=c;syncFields();render();push()};$('sws').appendChild(s)});
 function addB(t){const p=cur()||base;bubbles.push(mk({...p,text:t,x:p.x+30,y:p.y+30,tx:p.tx+30,ty:p.ty+30,bx:p.bx==null?null:p.bx+30,by:p.by==null?null:p.by+30}));sel=bubbles.length-1;syncUI();render();push()}
 $('add').onclick=()=>addB('新しい[台詞|せりふ]');$('dup').onclick=()=>addB(cur().text);
 $('del').onclick=()=>{if(!bubbles.length)return;bubbles.splice(sel,1);sel=Math.max(0,sel-1);if(!bubbles.length)bubbles.push(mk({text:''}));syncUI();render();push()};
 $('allf').onclick=()=>{const c=cur();bubbles.forEach(b=>{['ff','fs','lh','rs','fw'].forEach(k=>b[k]=c[k])});render();push()};
 
+function wrapSel(mid,caret){const t=$('text'),a=t.selectionStart,z=t.selectionEnd;if(a===z){alert('Hãy bôi đen đoạn chữ trong ô nội dung trước.');return}
+ const ins='['+t.value.slice(a,z)+mid+']';t.setRangeText(ins,a,z,'end');if(caret){t.focus();t.setSelectionRange(a+ins.length-1,a+ins.length-1)}
+ cur().text=t.value;hl();render();push()}
+$('rb').onclick=()=>wrapSel('|',true);$('cb').onclick=()=>wrapSel('||'+$('pc').value,false);
 // ---- fonts
 const DEF=['Noto Sans JP','Yu Gothic','Yu Mincho','Meiryo','MS Gothic','MS Mincho','Hiragino Kaku Gothic ProN','Hiragino Maru Gothic ProN','Hiragino Mincho ProN','Arial','Times New Roman'];
 function fillFonts(a){$('fl').innerHTML='';[...new Set(a)].forEach(n=>{const o=document.createElement('option');o.value=n;$('fl').appendChild(o)})}
@@ -236,7 +273,7 @@ cv.onpointermove=e=>{if(!drag)return;const p=pos(e),b=drag.b;
  else if(drag.t==='size'){b.auto=0;b.W=Math.round(Math.max(30,p.x-b.x));b.H=Math.round(Math.max(30,p.y-b.y));syncFields()}
  else{b.x=p.x-drag.ox;b.y=p.y-drag.oy;b.tx=b.x+drag.tdx;b.ty=b.y+drag.tdy;if(drag.bdx!=null){b.bx=b.x+drag.bdx;b.by=b.y+drag.bdy}}
  render()};
-cv.onpointerup=()=>{if(drag){drag=null;syncFields();push()}};
+cv.onpointerup=()=>{if(drag){drag=null;syncFields();push();render()}};
 document.addEventListener('keydown',e=>{
  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();return}
